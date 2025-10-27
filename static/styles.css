@@ -1,0 +1,26 @@
+body {
+  background-color: #ffffff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+.logo {
+  width: 80px;
+  height: auto;
+}
+
+.text-primary {
+  color: #001a57 !important; /* Deep navy blue */
+}
+
+.btn-primary {
+  background-color: #001a57;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #002b8a;
+}
+
+.card {
+  border: 1px solid #000;
+}
