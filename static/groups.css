@@ -1,0 +1,55 @@
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: #fff;
+}
+
+.sidebar {
+  width: 140px;
+  background-color: #f5f5f5;
+  border-right: 1px solid #ccc;
+}
+
+.logo {
+  width: 70px;
+  height: auto;
+}
+
+.nav-link {
+  color: #000;
+  padding: 15px 10px;
+  transition: background 0.2s;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background-color: #dcdcd0;
+  color: #001a57;
+}
+
+.settings {
+  border-top: 1px solid #ccc;
+  padding-top: 10px;
+  margin-top: 20px;
+}
+
+.btn-primary {
+  background-color: #001a57;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #002b8a;
+}
+
+.save-box {
+  background-color: #f9f9f9;
+}
+
+.table th, .table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.bg-secondary-subtle {
+  background-color: #e6ecf2;
+}
