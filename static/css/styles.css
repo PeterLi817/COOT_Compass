@@ -11409,3 +11409,60 @@ body {
   position:absolute; left:0; right:0; bottom:0;
   border-top:1px solid #d1d5db; background:#f3f4f6; text-align:center; padding:12px 0;
 }
+.sb-nav-fixed #layoutSidenav #layoutSidenav_content{ padding-left:0 !important; top:0 !important; }
+
+.page-wrap { padding: 32px; }
+.page-title { font-size: 64px; font-weight: 700; line-height: 1; margin: 4px 0 18px; }
+
+.top-row { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; }
+.changes-panel {
+  background:#f8fafc; border:1px solid #cbd5e1; padding:12px 16px; border-radius:4px;
+  min-width: 360px; display:flex; flex-direction:column; gap:10px;
+}
+.changes-text { font-size:14px; }
+.changes-actions { display:flex; gap:10px; flex-wrap:wrap; }
+
+/* Buttons */
+.btn { border:0; padding:10px 16px; font-weight:600; border-radius:4px; cursor:pointer; }
+.btn-navy { background:#0f2e70; color:#fff; }
+.btn-lightgray { background:#e5e7eb; }
+.btn-filter { background:#9ca3af; color:#000; }
+
+/* Search */
+.search-row { display:flex; align-items:center; gap:10px; margin:6px 0 14px; }
+.search-input { position:relative; flex:1; }
+.search-input input{
+  width:100%; padding:10px 12px 10px 36px; border:1px solid #9ca3af; border-radius:2px; font-size:16px;
+}
+.search-icon{ position:absolute; left:10px; top:50%; transform:translateY(-50%); }
+
+/* Actions row */
+.action-row { display:flex; gap:16px; margin:8px 0 12px; }
+
+/* Group panel */
+.group-box { border:1px solid #9aa5b1; background:#fff; }
+.group-box__header {
+  background:#c7d0dd; color:#1f2937; padding:8px 10px; font-weight:700; text-align:center;
+}
+.group-box__body { padding:10px; }
+/* .group-scroll { max-height: 60vh; overflow: auto; } */
+
+/* Validations */
+.validity { padding:6px 8px 14px; }
+.validity-item { margin-top:8px; }
+.validity-note { margin-left:24px; color:#374151; }
+.status-valid { color:#1f7a1f; font-weight:700; }
+.status-invalid { color:#b91c1c; font-weight:700; }
+.status-muted { color:#157f2d; }
+
+/* Section headers inside panel */
+.section-h { font-size:16px; margin:14px 2px 8px; }
+
+/* Tables to match mock */
+.table-wrap { border:1px solid #333; margin-bottom:18px; }
+.grid-table { width:100%; border-collapse:collapse; }
+.grid-table thead th{
+  background:#c7d0dd; text-align:left; padding:8px; border:1px solid #333; font-weight:600;
+}
+.grid-table td{ padding:8px; border:1px solid #333; }
+.w-id{ width:80px; }
