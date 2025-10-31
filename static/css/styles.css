@@ -11241,3 +11241,34 @@ body {
   font-size: 0.75rem;
   border-radius: 0.375rem !important;
 }
+
+.bg-primary {
+  background-color: white !important;
+}
+
+.logo-container {
+  top: 6rem;
+  left: 1.5rem;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.logo-top-left {
+  height: 50px;
+  width: auto;
+}
+
+.logo-text {
+  font-family: Arial, sans-serif;
+  font-weight: 500;
+  color: #002855;
+  text-align: center;
+}
+
+.logo-text p {
+  margin: 0;
+  line-height: 1.2;
+}
