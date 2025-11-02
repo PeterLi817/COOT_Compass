@@ -44,15 +44,15 @@ class Student(db.Model):
 
     trip_id = db.Column(db.Integer, db.ForeignKey('trips.id', ondelete='SET NULL'), nullable=True)
 
-    trip_pref_1 = db.Column(db.String(50))
+    trip_pref_1 = db.Column(db.String(50)) # backpacking, canoeing, basecamp, classic maine camp, local exploration, or specialty basecamp
     trip_pref_2 = db.Column(db.String(50))
     trip_pref_3 = db.Column(db.String(50))
-    dorm = db.Column(db.String(50))
+    dorm = db.Column(db.String(50)) # Dana, West, East, JOPO, etc
     athletic_team = db.Column(db.String(50))
-    gender = db.Column(db.String(20))
+    gender = db.Column(db.String(20)) # male, female, other
     notes = db.Column(db.Text)
-    water_comfort = db.Column(db.String(50))
-    tent_comfort = db.Column(db.String(50))
+    water_comfort = db.Column(db.Integer) # 1-5
+    tent_comfort = db.Column(db.Integer) # 1-5
     hometown = db.Column(db.String(100))
     poc = db.Column(db.Boolean)
     fli_international = db.Column(db.Boolean)

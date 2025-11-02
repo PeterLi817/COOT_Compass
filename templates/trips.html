@@ -15,7 +15,7 @@
         <div id="layoutSidenav">
             <div id="layoutSidenav_nav">
                 <nav class="sb-sidenav accordion sb-sidenav-light" id="sidenavAccordion">
-                    
+
                     <div class="sidebar-logo-container" style="text-align: center; padding: 1.5rem 0;">
                         <a href="{{ url_for('main.index') }}">
                             <img src="../static/img/colby_logo.png" alt="Colby logo" style="height: 50px; width: auto;">
@@ -75,33 +75,17 @@
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        {% for trip in trips %}
                                         <tr>
-                                            <td>1</td>
-                                            <td>Backpacking</td>
-                                            <td>Mahoosuc A</td>
-                                            <td>Mahoosuc Notch, North Oxford, ME, 04261</td>
-                                            <td>8</td>
-                                            <td>No</td>
-                                            <td>Yes</td>
+                                            <td>{{ trip.id }}</td>
+                                            <td>{{ trip.trip_type }}</td>
+                                            <td>{{ trip.trip_name }}</td>
+                                            <td>{{ trip.address or '' }}</td>
+                                            <td>{{ trip.capacity }}</td>
+                                            <td>{{ 'Yes' if trip.water else 'No' }}</td>
+                                            <td>{{ 'Yes' if trip.tent else 'No' }}</td>
                                         </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td>Canoe</td>
-                                            <td>Loon Bay A</td>
-                                            <td>Loon Bay, Waite, ME, 04492</td>
-                                            <td>8</td>
-                                            <td>Yes</td>
-                                            <td>Yes</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
-                                            <td>Classic Maine Camp</td>
-                                            <td>Camp Wavus A</td>
-                                            <td>Camp Wavus, Jefferson, ME, 04348</td>
-                                            <td>10</td>
-                                            <td>No</td>
-                                            <td>No</td>
-                                        </tr>
+                                        {% endfor %}
                                     </tbody>
                                 </table>
                             </div>

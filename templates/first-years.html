@@ -15,7 +15,7 @@
         <div id="layoutSidenav">
             <div id="layoutSidenav_nav">
                 <nav class="sb-sidenav accordion sb-sidenav-light" id="sidenavAccordion">
-                    
+
                     <div class="sidebar-logo-container" style="text-align: center; padding: 1.5rem 0;">
                         <a href="{{ url_for('main.index') }}">
                             <img src="../static/img/colby_logo.png" alt="Colby logo" style="height: 50px; width: auto;">
@@ -85,44 +85,27 @@
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        {% for student in students %}
                                         <tr>
-                                            <td>123456</td>
-                                            <td>jane@colby.edu</td>
-                                            <td>Jane</td>
-                                            <td>Doe</td>
-                                            <td>Loon Bay A</td>
-                                            <td>Canoeing</td>
-                                            <td>Basecamp</td>
-                                            <td>Backpacking</td>
-                                            <td>Dana 123</td>
-                                            <td>Women's Soccer</td>
-                                            <td>Female</td>
-                                            <td>Yes</td>
-                                            <td>No</td>
-                                            <td>Waterville, Maine</td>
-                                            <td>4</td>
-                                            <td>3</td>
-                                            <td>Allergic to nuts</td>
+                                            <td>{{ student.student_id }}</td>
+                                            <td>{{ student.email }}</td>
+                                            <td>{{ student.first_name }}</td>
+                                            <td>{{ student.last_name }}</td>
+                                            <td>{{ student.trip.trip_name if student.trip else '' }}</td>
+                                            <td>{{ student.trip_pref_1 or '' }}</td>
+                                            <td>{{ student.trip_pref_2 or '' }}</td>
+                                            <td>{{ student.trip_pref_3 or '' }}</td>
+                                            <td>{{ student.dorm or '' }}</td>
+                                            <td>{{ student.athletic_team or 'No' }}</td>
+                                            <td>{{ student.gender or '' }}</td>
+                                            <td>{{ 'Yes' if student.poc else 'No' }}</td>
+                                            <td>{{ 'Yes' if student.fli_international else 'No' }}</td>
+                                            <td>{{ student.hometown or '' }}</td>
+                                            <td>{{ student.water_comfort or '' }}</td>
+                                            <td>{{ student.tent_comfort or '' }}</td>
+                                            <td>{{ student.notes or 'N/A' }}</td>
                                         </tr>
-                                        <tr>
-                                            <td>654321</td>
-                                            <td>john@colby.edu</td>
-                                            <td>John</td>
-                                            <td>Smith</td>
-                                            <td>Acadia A</td>
-                                            <td>Rock Climbing</td>
-                                            <td>Surfing</td>
-                                            <td>Rafting</td>
-                                            <td>Bobs 312</td>
-                                            <td>No</td>
-                                            <td>Male</td>
-                                            <td>No</td>
-                                            <td>No</td>
-                                            <td>Augusta, Maine</td>
-                                            <td>2</td>
-                                            <td>5</td>
-                                            <td>N/A</td>
-                                        </tr>
+                                        {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
