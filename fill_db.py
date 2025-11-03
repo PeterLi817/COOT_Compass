@@ -27,7 +27,7 @@ def add_fake_data():
                 water=random.choice([True, False]),
                 tent=random.choice([True, False])
             )
-            for i in range(2)
+            for i in range(10)
         ]
         db.session.add_all(trips)
         db.session.commit()
@@ -38,7 +38,7 @@ def add_fake_data():
         dorms = ["West", "JOPO1", "JOPO2","Johnson", "Leonard"]
         teams = ["Soccer", "Hockey", "Track", "Crew", "None"]
 
-        for i in range(10):
+        for i in range(100):
             student = Student(
                 student_id=f"S{i+1:03d}",
                 first_name=fake.first_name(),
