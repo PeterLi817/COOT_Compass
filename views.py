@@ -1,22 +1,27 @@
 from flask import Blueprint, render_template
+from models import Student, Trip
 
 main = Blueprint('main', __name__)
 
 @main.route('/')
 def index():
-    return render_template('groups.html')
+    trips = Trip.query.all()
+    return render_template('groups.html', trips=trips)
 
 @main.route('/trips')
 def trips():
-    return render_template('trips.html')
+    trips = Trip.query.all()
+    return render_template('trips.html', trips=trips)
 
 @main.route('/first-years')
 def first_years():
-    return render_template('first-years.html')
+    students = Student.query.all()
+    return render_template('first-years.html', students=students)
 
 @main.route('/groups')
 def groups():
-    return render_template('groups.html')
+    trips = Trip.query.all()
+    return render_template('groups.html', trips=trips)
 
 @main.route('/settings')
 def settings():
