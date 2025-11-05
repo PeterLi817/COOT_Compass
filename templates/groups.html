@@ -24,18 +24,19 @@
 
                     <div class="sb-sidenav-menu">
                         <div class="nav">
-                            <a class="nav-link" href="trips.html">
+                            <a class="nav-link" href="{{ url_for('main.trips') }}">
                                 <div class="sb-nav-link-icon"><i class="fas fa-route"></i></div>
                                 Trips
                             </a>
-                            <a class="nav-link" href="first-years.html">
+                            <a class="nav-link" href="{{ url_for('main.first_years') }}">
                                 <div class="sb-nav-link-icon"><i class="fas fa-user-plus"></i></div>
                                 First Years
                             </a>
-                            <a class="nav-link" href="groups.html">
+                            <a class="nav-link" href="{{ url_for('main.groups') }}">
                                 <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
                                 Groups
                             </a>
+                            
                         </div>
                     </div>
 
