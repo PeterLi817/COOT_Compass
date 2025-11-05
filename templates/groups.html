@@ -51,6 +51,63 @@
                 <main>
                     <div class="container-fluid px-4">
                         <h1 class="mt-4">Groups</h1>
+                        <div class="mb-3">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label for="groupSearch" class="form-label">Search</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" style="background-color: #003366; color: white;">
+                                            <i class="fas fa-search"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="groupSearch" placeholder="Search groups by name or type..." aria-label="Search groups">
+                                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="filterTripType" class="form-label">Trip Type</label>
+                                    <select class="form-select" id="filterTripType" aria-label="Filter by trip type">
+                                        <option value="">All Types</option>
+                                        <option value="backpacking">Backpacking</option>
+                                        <option value="canoeing">Canoeing</option>
+                                        <option value="basecamp">Basecamp</option>
+                                        <option value="classic maine camp">Classic Maine Camp</option>
+                                        <option value="local exploration">Local Exploration</option>
+                                        <option value="specialty basecamp">Specialty Basecamp</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="filterWater" class="form-label">Water</label>
+                                    <select class="form-select" id="filterWater" aria-label="Filter by water">
+                                        <option value="">All</option>
+                                        <option value="true">Yes</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="filterTent" class="form-label">Tent</label>
+                                    <select class="form-select" id="filterTent" aria-label="Filter by tent">
+                                        <option value="">All</option>
+                                        <option value="true">Yes</option>
+                                        <option value="false">No</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="filterOpenSlots" class="form-label">Open Slots</label>
+                                    <select class="form-select" id="filterOpenSlots" aria-label="Filter by open slots">
+                                        <option value="">All</option>
+                                        <option value="true">Has Open Slots</option>
+                                        <option value="false">Full</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-1">
+                                    <button class="btn btn-outline-secondary w-100" type="button" id="clearFilters" title="Clear Filters">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                         <div class="action-row">
                             <button class="btn btn-navy">Sort Students</button>
                             <button class="btn btn-navy">Move a Student</button>
@@ -58,27 +115,76 @@
                         </div>
                         <div class="groups-list">
                             {% for trip in trips %}
-                            <div class="group-box">
-                                <div class="group-box__header">{{ trip.trip_name }} ({{ trip.trip_type }})</div>
+                            <div class="group-box"
+                                 data-search-text="{{ trip.trip_name|lower }} {{ trip.trip_type|lower }}"
+                                 data-trip-type="{{ trip.trip_type|lower }}"
+                                 data-water="{{ 'true' if trip.water else 'false' }}"
+                                 data-tent="{{ 'true' if trip.tent else 'false' }}"
+                                 data-open-slots="{{ 'true' if trip.has_open_slots else 'false' }}">
+                                <div class="group-box__header">
+                                    {{ trip.trip_name }} ({{ trip.trip_type }})
+                                    <span style="float: right; font-size: 0.9em; font-weight: normal; color: #666;">
+                                        Capacity: {{ trip.current_students }}/{{ trip.capacity }}
+                                        {% if trip.has_open_slots %}
+                                        <span style="color: #1f7a1f;">({{ trip.open_slots_count }} open)</span>
+                                        {% else %}
+                                        <span style="color: #b91c1c;">(Full)</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
 
                                 <div class="group-box__body group-scroll">
                                     <!-- Validations -->
                                     <div class="validity">
-                                    <div><b>Validity:</b> <span class="status-invalid">NOT VALID</span></div>
+                                    <div><b>Validity:</b>
+                                        <span class="{% if trip.validations.overall_valid %}status-valid{% else %}status-invalid{% endif %}">
+                                            {% if trip.validations.overall_valid %}VALID{% else %}NOT VALID{% endif %}
+                                        </span>
+                                    </div>
 
                                     <div class="validity-item">
-                                        <div>Gender Ratio: <span class="status-muted">4 Male, 4 Female</span></div>
+                                        <div>Gender Ratio:
+                                            <span class="{% if trip.validations.gender_ratio.valid %}status-valid{% else %}status-invalid{% endif %}">
+                                                {{ trip.validations.gender_ratio.message }}
+                                                {% if not trip.validations.gender_ratio.valid %} (NOT VALID){% endif %}
+                                            </span>
+                                        </div>
+                                        {% if trip.validations.gender_ratio.details %}
+                                        <div class="validity-note">{{ trip.validations.gender_ratio.details }}</div>
+                                        {% endif %}
                                     </div>
                                     <div class="validity-item">
-                                        <div>Athletic Teams: <span class="status-valid">VALID</span></div>
+                                        <div>Athletic Teams:
+                                            <span class="{% if trip.validations.athletic_teams.valid %}status-valid{% else %}status-invalid{% endif %}">
+                                                {% if trip.validations.athletic_teams.valid %}VALID{% else %}NOT VALID{% endif %}
+                                            </span>
+                                        </div>
+                                        {% for detail in trip.validations.athletic_teams.details %}
+                                        <div class="validity-note">{{ detail }}</div>
+                                        {% endfor %}
                                     </div>
                                     <div class="validity-item">
-                                        <div>Roommates: <span class="status-invalid">NOT VALID</span></div>
-                                        <div class="validity-note">Michael Brown and Jamie Davis are roommates.</div>
+                                        <div>Roommates:
+                                            <span class="{% if trip.validations.roommates.valid %}status-valid{% else %}status-invalid{% endif %}">
+                                                {% if trip.validations.roommates.valid %}VALID{% else %}NOT VALID{% endif %}
+                                            </span>
+                                        </div>
+                                        {% for detail in trip.validations.roommates.details %}
+                                        <div class="validity-note">{{ detail }}</div>
+                                        {% endfor %}
                                     </div>
+                                    {% if trip.water or trip.tent %}
                                     <div class="validity-item">
-                                        <div>Hometowns: <span class="status-valid">VALID</span></div>
+                                        <div>Comfort Levels:
+                                            <span class="{% if trip.validations.comfort_levels.valid %}status-valid{% else %}status-invalid{% endif %}">
+                                                {% if trip.validations.comfort_levels.valid %}VALID{% else %}NOT VALID{% endif %}
+                                            </span>
+                                        </div>
+                                        {% for detail in trip.validations.comfort_levels.details %}
+                                        <div class="validity-note">{{ detail }}</div>
+                                        {% endfor %}
                                     </div>
+                                    {% endif %}
                                     </div>
 
                                     <!-- Leaders table -->
@@ -164,14 +270,15 @@
                                     </div>
                                 </div>
                             </div>
-                            {% endfor %}
-                        </div>
+                        {% endfor %}
                     </div>
                 </main>
             </div>
         </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
+        <script src="{{ url_for('static', filename='js/datatables-simple-demo.js') }}"></script>
+        <script src="{{ url_for('static', filename='js/groups.js') }}"></script>
         <script>
             window.addEventListener('DOMContentLoaded', event => {
                 // Initialize all tables with class 'datatables-table'
