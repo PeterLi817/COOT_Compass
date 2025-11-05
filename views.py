@@ -35,7 +35,6 @@ def settings():
     return render_template('settings.html')
 
 @main.route('/move-student', methods=['GET', 'POST'])
-@login_required
 def move_student():
     trips = Trip.query.all()  # Get all trips for dropdown
 
@@ -43,14 +42,12 @@ def move_student():
         student_input = request.form.get('student').strip()
         new_trip_id = request.form.get('new_trip')
 
-        # Find student
         student = Student.query.filter(
             (Student.student_id == student_input) |
             (Student.first_name.ilike(f"%{student_input}%")) |
             (Student.last_name.ilike(f"%{student_input}%"))
         ).first()
 
-        # Find the new trip
         trip = Trip.query.get(new_trip_id)
 
         if not student and not trip:
@@ -92,14 +89,12 @@ def swap_students():
         if not student1 or not student2:
             return render_template('swap_students.html', message="One or both students not found.")
 
-        # Swap trips
         temp_trip = student1.trip_id
         student1.trip_id = student2.trip_id
         student2.trip_id = temp_trip
 
         db.session.commit()
 
-        # Redirect to Groups page to confirm
         return redirect(url_for('main.groups'))
 
     return render_template('swap_students.html')
