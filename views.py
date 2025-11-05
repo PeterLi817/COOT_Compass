@@ -40,7 +40,7 @@ def move_student():
 
 @main.route('/swap-students')
 def swap_students():
-    return render_template('swap_.html')
+    return render_template('swap_students.html')
 
 @main.route('/check-trips')
 def check_trips():
