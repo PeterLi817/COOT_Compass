@@ -53,9 +53,8 @@
                         <h1 class="mt-4">Groups</h1>
                         <div class="action-row">
                             <button class="btn btn-navy">Sort Students</button>
-                            <button class="btn btn-navy">Move a Student</button>
-                            <button class="btn btn-navy">Swap Two Students</button>
-                            <button class="btn btn-navy">Check Validity of Trips</button>
+                            <button class="btn btn-navy" onclick="window.location.href='{{ url_for('main.move_student') }}'">Move a Student</button>
+                            <button class="btn btn-navy" onclick="window.location.href='{{ url_for('main.swap_students') }}'">Swap Two Students</button>
                         </div>
                         <div class="groups-list">
                             <div class="group-box">
