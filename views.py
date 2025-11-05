@@ -33,3 +33,16 @@ def groups():
 @login_required
 def settings():
     return render_template('settings.html')
+
+@main.route('/move-student')
+def move_student():
+    return render_template('move_result.html')
+
+@main.route('/swap-students')
+def swap_students():
+    return render_template('swap_students.html')
+
+@main.route('/check-trips')
+def check_trips():
+    return render_template('check_result.html')
+
