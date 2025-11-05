@@ -78,29 +78,35 @@
         <h1>Swap Students</h1>
         <p>Use this tool to swap two students between their trips.</p>
 
-        <div class="row align-items-center mb-4">
-            <div class="col-md-5">
-                <div class="student-box">
-                    <label class="form-label fw-bold">Student 1</label>
-                    <input type="text" class="form-control mb-3" placeholder="Enter Student 1 Name or ID">
-                    <input type="text" class="form-control" placeholder="Current Trip">
+        <!-- Swap Form -->
+        <form method="POST" action="{{ url_for('main.swap_students') }}">
+            <div class="row align-items-center mb-4">
+                <div class="col-md-5">
+                    <div class="student-box">
+                        <label class="form-label fw-bold">Student 1</label>
+                        <input type="text" class="form-control mb-3" name="student1" placeholder="Enter Student 1 Name or ID" required>
+                    </div>
+                </div>
+
+                <div class="col-md-2 swap-icon">⇄</div>
+
+                <div class="col-md-5">
+                    <div class="student-box">
+                        <label class="form-label fw-bold">Student 2</label>
+                        <input type="text" class="form-control mb-3" name="student2" placeholder="Enter Student 2 Name or ID" required>
+                    </div>
                 </div>
             </div>
 
-            <div class="col-md-2 swap-icon">
-                ⇄
-            </div>
+            <button type="submit" class="btn-swap">Confirm Swap</button>
+        </form>
 
-            <div class="col-md-5">
-                <div class="student-box">
-                    <label class="form-label fw-bold">Student 2</label>
-                    <input type="text" class="form-control mb-3" placeholder="Enter Student 2 Name or ID">
-                    <input type="text" class="form-control" placeholder="Current Trip">
-                </div>
+        <!-- Message Section -->
+        {% if message %}
+            <div class="alert {% if '✅' in message %}alert-success{% else %}alert-danger{% endif %} text-center mt-4" role="alert">
+                {{ message }}
             </div>
-        </div>
-
-        <button class="btn-swap">Confirm Swap</button>
+        {% endif %}
 
         <a href="{{ url_for('main.groups') }}">← Back to Groups</a>
     </div>
