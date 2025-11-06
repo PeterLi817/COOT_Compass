@@ -102,6 +102,35 @@ def add_student():
 
     return redirect(url_for('main.first_years'))
 
+@main.route('/remove-student', methods=['GET', 'POST'])
+@login_required
+def remove_student():
+   if request.method == 'POST':
+       student_id_to_remove = request.form.get('student_id')
+
+       # Make sure the student id was given
+       if not student_id_to_remove:
+           flash('Error: No student was selected.', 'danger')
+           return redirect(url_for('main.first_years'))
+
+       # Find the student in the database
+       student = Student.query.get(student_id_to_remove)
+
+       if student:
+           try:
+               # Delete the student
+               db.session.delete(student)
+               db.session.commit()
+               flash(f'Student {student.first_name} {student.last_name} was removed successfully.', 'success')
+           except Exception as e:
+               db.session.rollback()
+               flash(f'Error: Could not remove student. {str(e)}', 'danger')
+       else:
+           flash('Error: Student not found.', 'danger')
+
+       return redirect(url_for('main.first_years'))
+
+   return redirect(url_for('main.first_years'))
 
 def validate_trip(trip):
     """Validate a trip and return validation results."""
