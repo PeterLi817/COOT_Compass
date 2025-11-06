@@ -29,6 +29,13 @@ def first_years():
 @login_required
 def groups():
     trips = Trip.query.all()
+    # Add validation data and capacity info to each trip
+    for trip in trips:
+        trip.validations = validate_trip(trip)
+        # Calculate capacity information
+        trip.current_students = len(trip.students)
+        trip.has_open_slots = trip.current_students < trip.capacity
+        trip.open_slots_count = trip.capacity - trip.current_students
     return render_template('groups.html', trips=trips)
 
 @main.route('/settings')
