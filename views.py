@@ -1,6 +1,8 @@
-from flask import Blueprint, render_template, redirect, url_for,request
+from flask import Blueprint, render_template, redirect, url_for,request, flash
 from models import Student, Trip, db
 from flask_login import login_required
+import io
+import csv
 
 main = Blueprint('main', __name__)
 
@@ -34,70 +36,68 @@ def groups():
 def settings():
     return render_template('settings.html')
 
-@main.route('/move-student', methods=['GET', 'POST'])
+@main.route('/move-student', methods=['POST'])
+@login_required
 def move_student():
-    trips = Trip.query.all()  # Get all trips for dropdown
+    student_input = request.form.get('student_name', '').strip()
+    new_trip_id = request.form.get('new_trip_id')
 
-    if request.method == 'POST':
-        student_input = request.form.get('student').strip()
-        new_trip_id = request.form.get('new_trip')
+    # Find the student
+    student = Student.query.filter(
+        (Student.student_id == student_input) |
+        (Student.first_name.ilike(f"%{student_input}%")) |
+        (Student.last_name.ilike(f"%{student_input}%")) |
+        ((Student.first_name + ' ' + Student.last_name).ilike(f"%{student_input}%"))
+    ).first()
 
-        student = Student.query.filter(
-            (Student.student_id == student_input) |
-            (Student.first_name.ilike(f"%{student_input}%")) |
-            (Student.last_name.ilike(f"%{student_input}%"))
-        ).first()
+    # Find the new trip
+    new_trip = Trip.query.get(new_trip_id)
 
-        trip = Trip.query.get(new_trip_id)
+    if not student or not new_trip:
+        return {"success": False, "message": "⚠️ Student or trip not found."}, 400
 
-        if not student and not trip:
-            return render_template('move_result.html', trips=trips, message="Student and Trip not found.")
-        elif not student:
-            return render_template('move_result.html', trips=trips, message="Student not found.")
-        elif not trip:
-            return render_template('move_result.html', trips=trips, message="Trip not found.")
+    old_trip_name = student.trip.trip_name if student.trip else "None"
 
-        old_trip = student.trip.trip_name if student.trip else "None"
-        student.trip_id = trip.id
-        db.session.commit()
-        return redirect(url_for('main.groups'))
-
-        success_message = f"{student.first_name} {student.last_name} was moved from '{old_trip}' to '{trip.trip_name}'."
-        return render_template('move_result.html', trips=trips, message=success_message, success=True, student=student)
-
-    return render_template('move_result.html', trips=trips)
+    student.trip_id = new_trip.id
+    db.session.commit()
+    return redirect(url_for('main.groups'))
 
 
-@main.route('/swap-students', methods=['GET', 'POST'])
+
+
+@main.route('/swap-students', methods=['POST'])
+@login_required
 def swap_students():
-    if request.method == 'POST':
-        s1_input = request.form.get('student1').strip()
-        s2_input = request.form.get('student2').strip()
+    s1_input = (request.form.get('student1_name') or "").strip()
+    s2_input = (request.form.get('student2_name') or "").strip()
 
-        student1 = Student.query.filter(
-            (Student.student_id == s1_input) | 
-            (Student.first_name.ilike(f"%{s1_input}%")) | 
-            (Student.last_name.ilike(f"%{s1_input}%"))
-        ).first()
+    # Find both students
+    student1 = Student.query.filter(
+        (Student.student_id == s1_input) |
+        (Student.first_name.ilike(f"%{s1_input}%")) |
+        (Student.last_name.ilike(f"%{s1_input}%")) |
+        ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s1_input}%"))
+    ).first()
 
-        student2 = Student.query.filter(
-            (Student.student_id == s2_input) | 
-            (Student.first_name.ilike(f"%{s2_input}%")) | 
-            (Student.last_name.ilike(f"%{s2_input}%"))
-        ).first()
+    student2 = Student.query.filter(
+        (Student.student_id == s2_input) |
+        (Student.first_name.ilike(f"%{s2_input}%")) |
+        (Student.last_name.ilike(f"%{s2_input}%")) |
+        ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s2_input}%"))
+    ).first()
 
-        if not student1 or not student2:
-            return render_template('swap_students.html', message="One or both students not found.")
-
-        temp_trip = student1.trip_id
+    if student1 and student2:
+        # Swap their trips
+        temp = student1.trip_id
         student1.trip_id = student2.trip_id
-        student2.trip_id = temp_trip
-
+        student2.trip_id = temp
         db.session.commit()
 
-        return redirect(url_for('main.groups'))
+    # quietly return to Groups
+    return redirect(url_for('main.groups'))
 
-    return render_template('swap_students.html')
+
+
 
 
 @main.route('/upload', methods=['GET', 'POST'])
@@ -152,3 +152,57 @@ def upload():
         )
 
     return render_template('upload.html')
+
+@main.route('/upload_csv', methods=['POST'])
+def upload_csv():
+    file = request.files.get('csv_file')
+    if not file:
+        flash('No file selected.', 'danger')
+        return redirect(url_for('main.groups'))
+
+    try:
+        # Read CSV content
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        csv_input = csv.DictReader(stream)
+
+        for row in csv_input:
+            # Expecting CSV columns like:
+            # student_id,first_name,last_name,trip_name,trip_type,gender,athletic_team,hometown,dorm,water_comfort,tent_comfort
+            trip_name = row.get('trip_name', '').strip()
+
+            # Find or create the trip
+            trip = Trip.query.filter_by(trip_name=trip_name).first()
+            if not trip:
+                trip = Trip(trip_name=trip_name, trip_type=row.get('trip_type', ''))
+                db.session.add(trip)
+                db.session.flush()
+
+            # Find or create the student
+            student = Student.query.filter_by(student_id=row.get('student_id')).first()
+            if not student:
+                student = Student(
+                    student_id=row.get('student_id'),
+                    first_name=row.get('first_name'),
+                    last_name=row.get('last_name'),
+                    gender=row.get('gender'),
+                    athletic_team=row.get('athletic_team'),
+                    hometown=row.get('hometown'),
+                    dorm=row.get('dorm'),
+                    water_comfort=row.get('water_comfort'),
+                    tent_comfort=row.get('tent_comfort'),
+                    trip_id=trip.id
+                )
+                db.session.add(student)
+            else:
+                # If student already exists, just update their trip
+                student.trip_id = trip.id
+
+        db.session.commit()
+        flash('CSV uploaded and database updated successfully!', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error processing CSV: {str(e)}', 'danger')
+
+    return redirect(url_for('main.groups'))
+
