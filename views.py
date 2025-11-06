@@ -78,7 +78,7 @@ def swap_students():
     s1_input = (request.form.get('student1_name') or "").strip()
     s2_input = (request.form.get('student2_name') or "").strip()
 
-    # Find both students
+    # Find both students (by ID or name)
     student1 = Student.query.filter(
         (Student.student_id == s1_input) |
         (Student.first_name.ilike(f"%{s1_input}%")) |
@@ -93,14 +93,12 @@ def swap_students():
         ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s2_input}%"))
     ).first()
 
+    # Only swap if both exist
     if student1 and student2:
-        # Swap their trips
-        temp = student1.trip_id
-        student1.trip_id = student2.trip_id
-        student2.trip_id = temp
+        student1.trip_id, student2.trip_id = student2.trip_id, student1.trip_id
         db.session.commit()
 
-    # quietly return to Groups
+    # Quietly reload Groups (no message)
     return redirect(url_for('main.groups'))
 
 
@@ -220,7 +218,7 @@ def upload_csv():
                     water_comfort=water_comfort,
                     tent_comfort=tent_comfort,
                     email=email,
-                    trip_id=trip.id  # ✅ links directly
+                    trip_id=trip.id  #links directly
                 )
                 db.session.add(student)
             else:
