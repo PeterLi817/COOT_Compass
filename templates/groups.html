@@ -7,12 +7,17 @@
         <meta name="description" content="" />
         <meta name="author" content="" />
         <title>Groups</title>
+
+        <!-- Bootstrap + Datatables + Styles -->
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
         <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
         <link href="../static/css/styles.css" rel="stylesheet" />
         <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     </head>
+
     <body class="sb-nav-fixed">
         <div id="layoutSidenav">
+            <!-- Sidebar Navigation -->
             <div id="layoutSidenav_nav">
                 <nav class="sb-sidenav accordion sb-sidenav-light" id="sidenavAccordion">
 
@@ -32,7 +37,7 @@
                                 <div class="sb-nav-link-icon"><i class="fas fa-user-plus"></i></div>
                                 First Years
                             </a>
-                            <a class="nav-link" href="{{ url_for('main.groups') }}">
+                            <a class="nav-link active" href="{{ url_for('main.groups') }}">
                                 <div class="sb-nav-link-icon"><i class="fas fa-users"></i></div>
                                 Groups
                             </a>
@@ -47,121 +52,82 @@
                     </div>
                 </nav>
             </div>
+
+            <!-- Main Content -->
             <div id="layoutSidenav_content">
                 <main>
                     <div class="container-fluid px-4">
                         <h1 class="mt-4">Groups</h1>
-                        <div class="action-row">
+
+                        <!-- Action Buttons -->
+                        <div class="action-row mb-3">
                             <button class="btn btn-navy">Sort Students</button>
-                            <button class="btn btn-navy" onclick="window.location.href='{{ url_for('main.move_student') }}'">
-                                Move Students
-                            </button>
-                            <button class="btn btn-navy" onclick="window.location.href='{{ url_for('main.swap_students') }}'">
-                                Swap Students
-                            </button>
+                            <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#moveStudentModal">Move Students</button>
+                            <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#swapStudentsModal">Swap Students</button>
                         </div>
+
+                        <!-- Group List -->
                         <div class="groups-list">
                             {% for trip in trips %}
-                            <div class="group-box">
+                            <div class="group-box mb-4">
                                 <div class="group-box__header">{{ trip.trip_name }} ({{ trip.trip_type }})</div>
 
                                 <div class="group-box__body group-scroll">
                                     <!-- Validations -->
-                                    <div class="validity">
-                                    <div><b>Validity:</b> <span class="status-invalid">NOT VALID</span></div>
-
-                                    <div class="validity-item">
-                                        <div>Gender Ratio: <span class="status-muted">4 Male, 4 Female</span></div>
-                                    </div>
-                                    <div class="validity-item">
-                                        <div>Athletic Teams: <span class="status-valid">VALID</span></div>
-                                    </div>
-                                    <div class="validity-item">
-                                        <div>Roommates: <span class="status-invalid">NOT VALID</span></div>
-                                        <div class="validity-note">Michael Brown and Jamie Davis are roommates.</div>
-                                    </div>
-                                    <div class="validity-item">
-                                        <div>Hometowns: <span class="status-valid">VALID</span></div>
-                                    </div>
+                                    <div class="validity mb-3">
+                                        <div><b>Validity:</b> <span class="status-valid">VALID</span></div>
+                                        <div class="validity-item">
+                                            <div>Gender Ratio: <span class="status-muted">4 Male, 4 Female</span></div>
+                                        </div>
                                     </div>
 
-                                    <!-- Leaders table -->
+                                    <!-- Leaders -->
                                     <h3 class="section-h">Leaders</h3>
                                     <div class="card mb-4">
-                                        <div class="card-header">
-                                            <i class="fas fa-table me-1"></i>
-                                            Leaders
-                                        </div>
+                                        <div class="card-header"><i class="fas fa-table me-1"></i> Leaders</div>
                                         <div class="card-body">
                                             <table class="datatables-table" id="leadersTable{{ trip.id }}">
                                                 <thead>
-                                                <tr>
-                                                    <th>ID</th>
-                                                    <th>First Name</th>
-                                                    <th>Last Name</th>
-                                                    <th>Gender</th>
-                                                    <th>Athletic Team</th>
-                                                    <th>Hometown</th>
-                                                </tr>
+                                                    <tr>
+                                                        <th>ID</th><th>First Name</th><th>Last Name</th>
+                                                        <th>Gender</th><th>Athletic Team</th><th>Hometown</th>
+                                                    </tr>
                                                 </thead>
                                                 <tbody>
-                                                <tr>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                </tr>
-                                                <tr>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                    <td>x</td>
-                                                </tr>
+                                                    <tr><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
+                                                    <tr><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
                                                 </tbody>
                                             </table>
                                         </div>
                                     </div>
 
-                                    <!-- Students table -->
+                                    <!-- Students -->
                                     <h3 class="section-h">Students</h3>
                                     <div class="card mb-4">
-                                        <div class="card-header">
-                                            <i class="fas fa-table me-1"></i>
-                                            Students
-                                        </div>
+                                        <div class="card-header"><i class="fas fa-table me-1"></i> Students</div>
                                         <div class="card-body">
                                             <table class="datatables-table" id="studentsTable{{ trip.id }}">
                                                 <thead>
-                                                <tr>
-                                                    <th>ID</th>
-                                                    <th>First Name</th>
-                                                    <th>Last Name</th>
-                                                    <th>Gender</th>
-                                                    <th>Athletic Team</th>
-                                                    <th>Hometown</th>
-                                                    <th>Dorm</th>
-                                                    <th>Water Comfort</th>
-                                                    <th>Tent Comfort</th>
-                                                </tr>
+                                                    <tr>
+                                                        <th>ID</th><th>First Name</th><th>Last Name</th>
+                                                        <th>Gender</th><th>Athletic Team</th><th>Hometown</th>
+                                                        <th>Dorm</th><th>Water Comfort</th><th>Tent Comfort</th>
+                                                    </tr>
                                                 </thead>
                                                 <tbody>
-                                                {% for student in trip.students %}
-                                                <tr>
-                                                    <td>{{ student.student_id }}</td>
-                                                    <td>{{ student.first_name }}</td>
-                                                    <td>{{ student.last_name }}</td>
-                                                    <td>{{ student.gender or '' }}</td>
-                                                    <td>{{ student.athletic_team or 'N/A' }}</td>
-                                                    <td>{{ student.hometown or '' }}</td>
-                                                    <td>{{ student.dorm or '' }}</td>
-                                                    <td>{{ student.water_comfort or '' }}</td>
-                                                    <td>{{ student.tent_comfort or '' }}</td>
-                                                </tr>
-                                                {% endfor %}
+                                                    {% for student in trip.students %}
+                                                    <tr>
+                                                        <td>{{ student.student_id }}</td>
+                                                        <td>{{ student.first_name }}</td>
+                                                        <td>{{ student.last_name }}</td>
+                                                        <td>{{ student.gender or '' }}</td>
+                                                        <td>{{ student.athletic_team or 'N/A' }}</td>
+                                                        <td>{{ student.hometown or '' }}</td>
+                                                        <td>{{ student.dorm or '' }}</td>
+                                                        <td>{{ student.water_comfort or '' }}</td>
+                                                        <td>{{ student.tent_comfort or '' }}</td>
+                                                    </tr>
+                                                    {% endfor %}
                                                 </tbody>
                                             </table>
                                         </div>
@@ -174,15 +140,83 @@
                 </main>
             </div>
         </div>
+
+
+        <div class="modal fade" id="moveStudentModal" tabindex="-1" aria-labelledby="moveStudentModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form method="POST" action="{{ url_for('main.move_student') }}">
+                        <div class="modal-header" style="background-color: #003366; color: white;">
+                            <h5 class="modal-title" id="moveStudentModalLabel">Move a Student</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-center text-muted mb-4">Select a student and move them to a new trip.</p>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Student Name or ID</label>
+                                <input type="text" name="student_name" class="form-control" placeholder="Enter student name or ID" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">New Trip</label>
+                                <select class="form-select" name="new_trip" required>
+                                    {% for trip in trips %}
+                                    <option value="{{ trip.trip_name }}">{{ trip.trip_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn text-white" style="background-color: #003366;">Confirm Move</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Swap Students Modal -->
+        <div class="modal fade" id="swapStudentsModal" tabindex="-1" aria-labelledby="swapStudentsModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content">
+                    <form method="POST" action="{{ url_for('main.swap_students') }}">
+                        <div class="modal-header" style="background-color: #003366; color: white;">
+                            <h5 class="modal-title" id="swapStudentsModalLabel">Swap Two Students</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-center text-muted mb-4">Swap two students between their trips.</p>
+                            <div class="row align-items-center mb-4">
+                                <div class="col-md-5">
+                                    <div class="bg-light p-4 rounded">
+                                        <label class="form-label fw-bold">Student 1</label>
+                                        <input type="text" class="form-control mb-3" name="student1" placeholder="Enter Student 1 Name or ID" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-2 text-center" style="font-size: 40px; color: #005fa3;">⇄</div>
+                                <div class="col-md-5">
+                                    <div class="bg-light p-4 rounded">
+                                        <label class="form-label fw-bold">Student 2</label>
+                                        <input type="text" class="form-control mb-3" name="student2" placeholder="Enter Student 2 Name or ID" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn text-white" style="background-color: #005fa3;">Confirm Swap</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scripts -->
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
         <script>
             window.addEventListener('DOMContentLoaded', event => {
-                // Initialize all tables with class 'datatables-table'
                 const tables = document.querySelectorAll('.datatables-table');
-                tables.forEach(table => {
-                    new simpleDatatables.DataTable(table);
-                });
+                tables.forEach(table => new simpleDatatables.DataTable(table));
             });
         </script>
     </body>

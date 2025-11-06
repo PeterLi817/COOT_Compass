@@ -99,3 +99,56 @@ def swap_students():
 
     return render_template('swap_students.html')
 
+
+@main.route('/upload', methods=['GET', 'POST'])
+@login_required
+def upload():
+    if request.method == 'POST':
+        file = request.files.get('file')
+
+        if not file:
+            return render_template('upload.html', message="No file selected.")
+
+        import csv
+        from io import TextIOWrapper
+
+        # Read CSV file
+        csv_file = TextIOWrapper(file, encoding='utf-8')
+        reader = csv.DictReader(csv_file)
+
+        added_students = 0
+        added_trips = 0
+
+        for row in reader:
+            # Example CSV columns: student_id, first_name, last_name, trip_name, trip_type, email
+            trip_name = row.get('trip_name')
+            trip_type = row.get('trip_type')
+
+            # Find or create trip
+            trip = Trip.query.filter_by(trip_name=trip_name).first()
+            if not trip:
+                trip = Trip(trip_name=trip_name, trip_type=trip_type)
+                db.session.add(trip)
+                added_trips += 1
+
+            # Add student
+            student = Student.query.filter_by(student_id=row.get('student_id')).first()
+            if not student:
+                student = Student(
+                    student_id=row.get('student_id'),
+                    first_name=row.get('first_name'),
+                    last_name=row.get('last_name'),
+                    email=row.get('email'),
+                    trip=trip
+                )
+                db.session.add(student)
+                added_students += 1
+
+        db.session.commit()
+
+        return render_template(
+            'upload.html',
+            message=f"✅ Uploaded successfully! Added {added_students} students and {added_trips} new trips."
+        )
+
+    return render_template('upload.html')
