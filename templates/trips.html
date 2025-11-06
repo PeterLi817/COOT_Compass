@@ -9,6 +9,8 @@
         <title>Trips</title>
         <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
         <link href="../static/css/styles.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
         <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     </head>
     <body class="sb-nav-fixed">
@@ -51,10 +53,21 @@
                 <main>
                     <div class="container-fluid px-4">
                         <h1 class="mt-4">Trips</h1>
+                        {% with messages = get_flashed_messages() %}
+                            {% if messages %}
+                                <div style="color: red;">
+                                {% for message in messages %}
+                                    <p>{{ message }}</p>
+                                {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endwith %}
                         <div class="action-row">
                             <button class="btn btn-navy">Upload</button>
-                            <button class="btn btn-navy">+ Add</button>
-                            <button class="btn btn-navy">- Remove</button>
+                            <button class="btn btn-navy" type="button" data-bs-toggle="modal" data-bs-target="#addTripModal">
+                                <i class="fas fa-plus me-1"></i> Add a trip
+                            </button>
+                            <button class="btn btn-navy" type="button" data-bs-toggle="modal" data-bs-target="#removeTripModal">- Remove</button>
                         </div>
                         <div class="card mb-4">
                             <div class="card-header">
@@ -94,8 +107,127 @@
                 </main>
             </div>
         </div>
+        <div class="modal fade" id="addTripModal" tabindex="-1" aria-labelledby="addTripModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="addTripModalLabel">Add New Trip</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form action="{{ url_for('main.add_trip') }}" method="POST">
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="trip_name" class="form-label">Trip Name*</label>
+                                    <input type="text" class="form-control" id="trip_name" name="trip_name" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="trip_type" class="form-label">Trip Type*</label>
+                                    <select id="trip_type" name="trip_type" class="form-label" required>
+                                        <option value="" disabled selected>Select an option</option>
+                                        <option value="backpacking">Backpacking</option>
+                                        <option value="canoeing">Canoeing</option>
+                                        <option value="basecamp">Basecamp</option>
+                                        <option value="classic maine camp">Classic Maine Camp</option>
+                                        <option value="local exploration">Local Exploration</option>
+                                        <option value="specialty basecamp">Specialty Basecamp</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="capacity" class="form-label">Capacity*</label>
+                                    <input type="number" class="form-control" id="capacity" name="capacity" min="1" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="address" class="form-label">Address</label>
+                                    <input type="text" class="form-control" id="address" name="address">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" value="true" id="water" name="water">
+                                        <label class="form-check-label" for="water">
+                                            Water Trip
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" value="true" id="tent" name="tent">
+                                        <label class="form-check-label" for="tent">
+                                            Tent Trip
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted">Fields marked with * are required.</small>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">Save Trip</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="removeTripModal" tabindex="-1" aria-labelledby="removeTripModalLabel" aria-hidden="true">
+           <div class="modal-dialog">
+               <div class="modal-content">
+                   <div class="modal-header">
+                       <h5 class="modal-title" id="removeTripModalLabel">Remove Trip</h5>
+                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                   </div>
+                   <div class="modal-body">
+                       <div class="mb-3">
+                           <label for="removeTripSelect" class="form-label">Select Trip to Remove</label>
+                           <select class="form-select" id="removeTripSelect" style="width: 100%;">
+                               <option value="">Select a trip...</option>
+                               {% for trip in trips %}
+                                   <option value="{{ trip.id }}">
+                                       {{ trip.trip_name }} ({{ trip.trip_type }})
+                                   </option>
+                               {% endfor %}
+                           </select>
+                       </div>
+                   </div>
+                   <div class="modal-footer">
+                       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                       <button type="button" class="btn btn-danger" id="openConfirmTripModalBtn">Next</button>
+                   </div>
+               </div>
+           </div>
+       </div>
+
+       <div class="modal fade" id="confirmRemoveTripModal" tabindex="-1" aria-labelledby="confirmRemoveTripModalLabel" aria-hidden="true">
+           <div class="modal-dialog">
+               <div class="modal-content">
+                   <div class="modal-header">
+                       <h5 class="modal-title" id="confirmRemoveTripModalLabel">Confirm Removal</h5>
+                       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                   </div>
+                   <div class="modal-body">
+                       <p>Are you sure you want to remove this trip?</p>
+                       <h4 class="text-center text-danger" id="tripNameToRemove"></h4>
+                       <p class="text-center text-muted">This action cannot be undone.</p>
+                   </div>
+                   <div class="modal-footer">
+                       <form action="{{ url_for('main.remove_trip') }}" method="POST" class="w-100">
+                           <input type="hidden" name="trip_id" id="tripIdToRemove">
+
+                           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                           <button type="submit" class="btn btn-danger float-end">Yes, Remove Trip</button>
+                       </form>
+                   </div>
+               </div>
+           </div>
+       </div>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
         <script src="../static/js/datatables-simple-demo.js"></script>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script src="{{ url_for('static', filename='js/trips.js') }}"></script>
     </body>
 </html>

@@ -57,17 +57,17 @@ def add_student():
         if not student_id or not email or not first_name or not last_name:
             flash('Error: One or more required fields (ID, Email, First/Last Name) are missing.', 'danger')
             return redirect(url_for('main.first_years'))
-        
+
         # See if student id or email already exist
         if Student.query.filter((Student.student_id == student_id) | (Student.email == email)).first():
             flash(f'Error: A student with that ID or Email already exists.', 'danger')
             return redirect(url_for('main.first_years'))
-        
+
         # Get the data from the checkboxes on the form
         # Returns true if check, None if unchecked
         poc = request.form.get('poc') == 'true'
         fli_international = request.form.get('fli_international') == 'true'
-        
+
         # Create a new student
         new_student = Student(
             student_id=student_id,
@@ -78,7 +78,7 @@ def add_student():
             trip_pref_2=request.form.get('trip_pref_2'),
             trip_pref_3=request.form.get('trip_pref_3'),
             dorm=request.form.get('dorm'),
-            athletic_team=request.form.get('athletic_team'), 
+            athletic_team=request.form.get('athletic_team'),
             notes=request.form.get('notes'),
             gender=request.form.get('gender'),
             water_comfort=request.form.get('water-comfort'),
@@ -131,6 +131,94 @@ def remove_student():
        return redirect(url_for('main.first_years'))
 
    return redirect(url_for('main.first_years'))
+
+@main.route('/add-trip', methods=['GET', 'POST'])
+@login_required
+def add_trip():
+    if request.method == 'POST':
+        # Get required data from the form
+        trip_name = request.form.get('trip_name')
+        trip_type = request.form.get('trip_type')
+        capacity = request.form.get('capacity')
+
+        # Make sure all required fields are there
+        if not trip_name or not trip_type or not capacity:
+            flash('Error: One or more required fields (Trip Name, Trip Type, Capacity) are missing.', 'danger')
+            return redirect(url_for('main.trips'))
+
+        # Validate capacity is a positive integer
+        try:
+            capacity = int(capacity)
+            if capacity < 1:
+                raise ValueError("Capacity must be at least 1")
+        except ValueError:
+            flash('Error: Capacity must be a positive integer.', 'danger')
+            return redirect(url_for('main.trips'))
+
+        # Check if trip name already exists
+        if Trip.query.filter_by(trip_name=trip_name).first():
+            flash(f'Error: A trip with the name "{trip_name}" already exists.', 'danger')
+            return redirect(url_for('main.trips'))
+
+        # Get the data from the checkboxes on the form
+        # Returns true if checked, False if unchecked
+        water = request.form.get('water') == 'true'
+        tent = request.form.get('tent') == 'true'
+
+        # Create a new trip
+        new_trip = Trip(
+            trip_name=trip_name,
+            trip_type=trip_type,
+            capacity=capacity,
+            address=request.form.get('address'),
+            water=water,
+            tent=tent
+        )
+
+        try:
+            # Add to database and save
+            db.session.add(new_trip)
+            db.session.commit()
+            flash('Trip added successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error: Could not add trip. {str(e)}', 'danger')
+
+        return redirect(url_for('main.trips'))
+
+    return redirect(url_for('main.trips'))
+
+@main.route('/remove-trip', methods=['GET', 'POST'])
+@login_required
+def remove_trip():
+   if request.method == 'POST':
+       trip_id_to_remove = request.form.get('trip_id')
+
+       # Make sure the trip id was given
+       if not trip_id_to_remove:
+           flash('Error: No trip was selected.', 'danger')
+           return redirect(url_for('main.trips'))
+
+       # Find the trip in the database
+       trip = Trip.query.get(trip_id_to_remove)
+
+       if trip:
+           try:
+               # Delete the trip - student trip placements will be set to NULL automatically
+               # by the foreign key constraint (ondelete='SET NULL')
+               trip_name = trip.trip_name
+               db.session.delete(trip)
+               db.session.commit()
+               flash(f'Trip {trip_name} was removed successfully. Student placements have been cleared.', 'success')
+           except Exception as e:
+               db.session.rollback()
+               flash(f'Error: Could not remove trip. {str(e)}', 'danger')
+       else:
+           flash('Error: Trip not found.', 'danger')
+
+       return redirect(url_for('main.trips'))
+
+   return redirect(url_for('main.trips'))
 
 def validate_trip(trip):
     """Validate a trip and return validation results."""
