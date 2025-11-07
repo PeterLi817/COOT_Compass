@@ -39,16 +39,63 @@ window.addEventListener('DOMContentLoaded', event => {
     const filterOpenSlots = document.getElementById('filterOpenSlots');
     const filterValidity = document.getElementById('filterValidity');
     const clearFiltersBtn = document.getElementById('clearFilters');
+    const applyFiltersBtn = document.getElementById('applyFilters');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+    const filterToggle = document.getElementById('filterToggle');
+    const filterModal = document.getElementById('filterModal');
+    const closeFilterModal = document.getElementById('closeFilterModal');
     const groupBoxes = document.querySelectorAll('.group-box');
+
+    // Track active filters
+    let activeFilters = {
+        tripType: '',
+        water: '',
+        tent: '',
+        openSlots: '',
+        validity: ''
+    };
+
+    // Modal functions
+    function openFilterModal() {
+        filterModal.style.display = 'flex';
+        setTimeout(() => {
+            filterModal.classList.add('show');
+        }, 10);
+        
+        // Set current filter values in the modal
+        filterTripType.value = activeFilters.tripType;
+        filterWater.value = activeFilters.water;
+        filterTent.value = activeFilters.tent;
+        filterOpenSlots.value = activeFilters.openSlots;
+        filterValidity.value = activeFilters.validity;
+    }
+
+    function closeFilterModalFunc() {
+        filterModal.classList.remove('show');
+        setTimeout(() => {
+            filterModal.style.display = 'none';
+        }, 300);
+    }
+
+    // Update filter button text based on active filters
+    function updateFilterButtonText() {
+        const activeCount = Object.values(activeFilters).filter(val => val !== '').length;
+        
+        if (activeCount > 0) {
+            filterToggle.innerHTML = `<i class="fas fa-filter"></i><span class="badge bg-white text-primary ms-1" style="font-size: 0.7em;">${activeCount}</span>`;
+            filterToggle.classList.remove('btn-outline-primary');
+            filterToggle.classList.add('btn-primary');
+            filterToggle.classList.add('text-white');
+        } else {
+            filterToggle.innerHTML = `<i class="fas fa-filter"></i>`;
+            filterToggle.classList.remove('btn-primary', 'text-white');
+            filterToggle.classList.add('btn-outline-primary');
+        }
+    }
 
     // Function to filter groups based on search and filters
     function filterGroups() {
         const searchTerm = searchInput.value.toLowerCase().trim();
-        const tripTypeFilter = filterTripType.value.toLowerCase();
-        const waterFilter = filterWater.value;
-        const tentFilter = filterTent.value;
-        const openSlotsFilter = filterOpenSlots.value;
-        const validityFilter = filterValidity.value;
 
         // Show/hide clear search button
         clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
@@ -66,41 +113,41 @@ window.addEventListener('DOMContentLoaded', event => {
             }
 
             // Trip type filter
-            if (matches && tripTypeFilter) {
+            if (matches && activeFilters.tripType) {
                 const tripType = box.getAttribute('data-trip-type') || '';
-                if (tripType !== tripTypeFilter) {
+                if (tripType !== activeFilters.tripType) {
                     matches = false;
                 }
             }
 
             // Water filter
-            if (matches && waterFilter) {
+            if (matches && activeFilters.water) {
                 const water = box.getAttribute('data-water') || '';
-                if (water !== waterFilter) {
+                if (water !== activeFilters.water) {
                     matches = false;
                 }
             }
 
             // Tent filter
-            if (matches && tentFilter) {
+            if (matches && activeFilters.tent) {
                 const tent = box.getAttribute('data-tent') || '';
-                if (tent !== tentFilter) {
+                if (tent !== activeFilters.tent) {
                     matches = false;
                 }
             }
 
             // Open slots filter
-            if (matches && openSlotsFilter) {
+            if (matches && activeFilters.openSlots) {
                 const openSlots = box.getAttribute('data-open-slots') || '';
-                if (openSlots !== openSlotsFilter) {
+                if (openSlots !== activeFilters.openSlots) {
                     matches = false;
                 }
             }
 
             // Validity filter
-            if (matches && validityFilter) {
+            if (matches && activeFilters.validity) {
                 const valid = box.getAttribute('data-valid') || '';
-                if (valid !== validityFilter) {
+                if (valid !== activeFilters.validity) {
                     matches = false;
                 }
             }
@@ -123,7 +170,28 @@ window.addEventListener('DOMContentLoaded', event => {
         }
     }
 
-    // Search input events
+    // Event listeners
+    // Filter toggle button
+    filterToggle.addEventListener('click', openFilterModal);
+    
+    // Close modal buttons
+    closeFilterModal.addEventListener('click', closeFilterModalFunc);
+    
+    // Close modal when clicking outside
+    filterModal.addEventListener('click', function(e) {
+        if (e.target === filterModal) {
+            closeFilterModalFunc();
+        }
+    });
+    
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && filterModal.classList.contains('show')) {
+            closeFilterModalFunc();
+        }
+    });
+
+    // Search input events (real-time search)
     searchInput.addEventListener('input', filterGroups);
 
     // Clear search button
@@ -133,14 +201,29 @@ window.addEventListener('DOMContentLoaded', event => {
         searchInput.focus();
     });
 
-    // Filter dropdown events
-    filterTripType.addEventListener('change', filterGroups);
-    filterWater.addEventListener('change', filterGroups);
-    filterTent.addEventListener('change', filterGroups);
-    filterOpenSlots.addEventListener('change', filterGroups);
-    filterValidity.addEventListener('change', filterGroups);
+    // Apply filters button
+    applyFiltersBtn.addEventListener('click', function() {
+        activeFilters.tripType = filterTripType.value.toLowerCase();
+        activeFilters.water = filterWater.value;
+        activeFilters.tent = filterTent.value;
+        activeFilters.openSlots = filterOpenSlots.value;
+        activeFilters.validity = filterValidity.value;
+        
+        updateFilterButtonText();
+        filterGroups();
+        closeFilterModalFunc();
+    });
 
-    // Clear all filters button
+    // Reset filters button (in modal)
+    resetFiltersBtn.addEventListener('click', function() {
+        filterTripType.value = '';
+        filterWater.value = '';
+        filterTent.value = '';
+        filterOpenSlots.value = '';
+        filterValidity.value = '';
+    });
+
+    // Clear all filters button (main page)
     clearFiltersBtn.addEventListener('click', function() {
         searchInput.value = '';
         filterTripType.value = '';
@@ -148,6 +231,16 @@ window.addEventListener('DOMContentLoaded', event => {
         filterTent.value = '';
         filterOpenSlots.value = '';
         filterValidity.value = '';
+        
+        activeFilters = {
+            tripType: '',
+            water: '',
+            tent: '',
+            openSlots: '',
+            validity: ''
+        };
+        
+        updateFilterButtonText();
         filterGroups();
     });
 
