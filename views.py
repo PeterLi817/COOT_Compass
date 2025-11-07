@@ -31,12 +31,13 @@ def first_years():
 @login_required
 def groups():
     trips = Trip.query.all()
+    students = Student.query.all()
     for trip in trips:
         trip.validations = validate_trip(trip)
         trip.current_students = len(trip.students)
         trip.has_open_slots = trip.current_students < trip.capacity
         trip.open_slots_count = trip.capacity - trip.current_students
-    return render_template('groups.html', trips=trips)
+    return render_template('groups.html', trips=trips, students=students)
 
 @main.route('/add-student', methods=['GET', 'POST'])
 @login_required
@@ -217,12 +218,18 @@ def move_student():
     student_input = request.form.get('student_name', '').strip()
     new_trip_id = request.form.get('new_trip_id')
 
-    student = Student.query.filter(
-        (Student.student_id == student_input) |
-        (Student.first_name.ilike(f"%{student_input}%")) |
-        (Student.last_name.ilike(f"%{student_input}%")) |
-        ((Student.first_name + ' ' + Student.last_name).ilike(f"%{student_input}%"))
-    ).first()
+    # Try to get student by ID first (from dropdown), then fall back to search
+    student = None
+    if student_input.isdigit():
+        student = Student.query.get(int(student_input))
+
+    if not student:
+        student = Student.query.filter(
+            (Student.student_id == student_input) |
+            (Student.first_name.ilike(f"%{student_input}%")) |
+            (Student.last_name.ilike(f"%{student_input}%")) |
+            ((Student.first_name + ' ' + Student.last_name).ilike(f"%{student_input}%"))
+        ).first()
 
     new_trip = Trip.query.get(new_trip_id)
 
@@ -231,6 +238,11 @@ def move_student():
 
     student.trip_id = new_trip.id
     db.session.commit()
+
+    # Redirect back to the referring page, default to groups if no referer
+    referer = request.referrer
+    if referer and ('first-years' in referer or 'groups' in referer):
+        return redirect(referer)
     return redirect(url_for('main.groups'))
 
 @main.route('/swap-students', methods=['POST'])
@@ -239,19 +251,30 @@ def swap_students():
     s1_input = (request.form.get('student1_name') or "").strip()
     s2_input = (request.form.get('student2_name') or "").strip()
 
-    student1 = Student.query.filter(
-        (Student.student_id == s1_input) |
-        (Student.first_name.ilike(f"%{s1_input}%")) |
-        (Student.last_name.ilike(f"%{s1_input}%")) |
-        ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s1_input}%"))
-    ).first()
+    # Try to get students by ID first (from dropdown), then fall back to search
+    student1 = None
+    if s1_input.isdigit():
+        student1 = Student.query.get(int(s1_input))
 
-    student2 = Student.query.filter(
-        (Student.student_id == s2_input) |
-        (Student.first_name.ilike(f"%{s2_input}%")) |
-        (Student.last_name.ilike(f"%{s2_input}%")) |
-        ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s2_input}%"))
-    ).first()
+    if not student1:
+        student1 = Student.query.filter(
+            (Student.student_id == s1_input) |
+            (Student.first_name.ilike(f"%{s1_input}%")) |
+            (Student.last_name.ilike(f"%{s1_input}%")) |
+            ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s1_input}%"))
+        ).first()
+
+    student2 = None
+    if s2_input.isdigit():
+        student2 = Student.query.get(int(s2_input))
+
+    if not student2:
+        student2 = Student.query.filter(
+            (Student.student_id == s2_input) |
+            (Student.first_name.ilike(f"%{s2_input}%")) |
+            (Student.last_name.ilike(f"%{s2_input}%")) |
+            ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s2_input}%"))
+        ).first()
 
     if student1 and student2:
         student1.trip_id, student2.trip_id = student2.trip_id, student1.trip_id
@@ -264,29 +287,37 @@ def upload_csv():
     file = request.files.get('csv_file')
     if not file:
         flash('⚠️ No file selected.', 'danger')
-        return redirect(url_for('main.groups'))
+        return redirect(url_for('main.first_years'))
 
     try:
         stream = StringIO(file.stream.read().decode("utf-8"))
         csv_input = csv.DictReader(stream)
 
         for row in csv_input:
-            student_id = (row.get('student_id') or '').strip()
-            first_name = (row.get('first_name') or '').strip()
-            last_name = (row.get('last_name') or '').strip()
-            gender = (row.get('gender') or '').strip()
-            athletic_team = (row.get('athletic_team') or '').strip()
-            hometown = (row.get('hometown') or '').strip()
-            dorm = (row.get('dorm') or '').strip()
-            water_comfort = (row.get('water_comfort') or '').strip()
-            tent_comfort = (row.get('tent_comfort') or '').strip()
-            trip_name = (row.get('trip_name') or '').strip()
-            trip_type = (row.get('trip_type') or '').strip()
-            email = (row.get('email') or '').strip()
-            trip_pref_1 = (row.get('trip_pref_1') or '').strip()
-            trip_pref_2 = (row.get('trip_pref_2') or '').strip()
-            trip_pref_3 = (row.get('trip_pref_3') or '').strip()
-            notes = (row.get('notes') or '').strip()
+            def null_if_empty(val):
+                v = (val or '').strip()
+                return v if v else None
+
+            student_id = null_if_empty(row.get('student_id'))
+            first_name = null_if_empty(row.get('first_name'))
+            last_name = null_if_empty(row.get('last_name'))
+            gender = null_if_empty(row.get('gender'))
+            athletic_team = null_if_empty(row.get('athletic_team'))
+            hometown = null_if_empty(row.get('hometown'))
+            dorm = null_if_empty(row.get('dorm'))
+            water_comfort = null_if_empty(row.get('water_comfort'))
+            tent_comfort = null_if_empty(row.get('tent_comfort'))
+            trip_name = null_if_empty(row.get('trip_name'))
+            trip_type = null_if_empty(row.get('trip_type'))
+            email = null_if_empty(row.get('email'))
+            trip_pref_1 = null_if_empty(row.get('trip_pref_1'))
+            trip_pref_2 = null_if_empty(row.get('trip_pref_2'))
+            trip_pref_3 = null_if_empty(row.get('trip_pref_3'))
+            notes = null_if_empty(row.get('notes'))
+
+            # Validate required fields for student
+            if not student_id or not first_name or not last_name or not email:
+                continue  # Skip this row if required student fields are missing
 
             # Handle boolean fields
             poc_value = (row.get('poc') or '').strip().lower()
@@ -294,18 +325,21 @@ def upload_csv():
             fli_international_value = (row.get('fli_international') or '').strip().lower()
             fli_international = fli_international_value in ['true', '1', 'yes']
 
-            trip = Trip.query.filter_by(trip_name=trip_name).first()
-            if not trip:
-                trip = Trip(
-                    trip_name=trip_name,
-                    trip_type=trip_type,
-                    capacity=10,
-                    address=None,
-                    water=False,
-                    tent=False
-                )
-                db.session.add(trip)
-                db.session.flush()
+            # Handle trip assignment
+            trip = None
+            if trip_name and trip_type:
+                trip = Trip.query.filter_by(trip_name=trip_name).first()
+                if not trip:
+                    trip = Trip(
+                        trip_name=trip_name,
+                        trip_type=trip_type,
+                        capacity=10,
+                        address=None,
+                        water=False,
+                        tent=False
+                    )
+                    db.session.add(trip)
+                    db.session.flush()
 
             student = Student.query.filter_by(student_id=student_id).first()
             if not student:
@@ -326,7 +360,7 @@ def upload_csv():
                     notes=notes,
                     poc=poc,
                     fli_international=fli_international,
-                    trip_id=trip.id
+                    trip_id=trip.id if trip else None
                 )
                 db.session.add(student)
             else:
@@ -345,7 +379,7 @@ def upload_csv():
                 student.notes = notes
                 student.poc = poc
                 student.fli_international = fli_international
-                student.trip_id = trip.id
+                student.trip_id = trip.id if trip else None
 
         db.session.commit()
         flash("CSV uploaded successfully!", "success")
@@ -354,7 +388,7 @@ def upload_csv():
         db.session.rollback()
         flash(f"⚠️ Error processing CSV: {str(e)}", "danger")
 
-    return redirect(url_for('main.groups'))
+    return redirect(url_for('main.first_years'))
 
 @main.route('/sort-students', methods=['POST'])
 @login_required

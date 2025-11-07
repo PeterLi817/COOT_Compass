@@ -12,6 +12,8 @@
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
         <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
         <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
         <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
     </head>
 
@@ -58,7 +60,7 @@
                 <main>
                     <div class="container-fluid px-4">
                         <h1 class="mt-4">Groups</h1>
-                        
+
                         <!-- Flash Messages for Groups Page -->
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
@@ -70,7 +72,7 @@
                                 {% endfor %}
                             {% endif %}
                         {% endwith %}
-                        
+
                         <div class="mb-3">
                             <div class="row g-3 align-items-end">
                                 <div class="col-md-3">
@@ -85,10 +87,10 @@
                                         </button>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-1">
                                     <label for="filterTripType" class="form-label">Trip Type</label>
                                     <select class="form-select" id="filterTripType" aria-label="Filter by trip type">
-                                        <option value="">All Types</option>
+                                        <option value="">All</option>
                                         <option value="backpacking">Backpacking</option>
                                         <option value="canoeing">Canoeing</option>
                                         <option value="basecamp">Basecamp</option>
@@ -97,7 +99,7 @@
                                         <option value="specialty basecamp">Specialty Basecamp</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-1">
                                     <label for="filterWater" class="form-label">Water</label>
                                     <select class="form-select" id="filterWater" aria-label="Filter by water">
                                         <option value="">All</option>
@@ -105,7 +107,7 @@
                                         <option value="false">No</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-1">
                                     <label for="filterTent" class="form-label">Tent</label>
                                     <select class="form-select" id="filterTent" aria-label="Filter by tent">
                                         <option value="">All</option>
@@ -113,12 +115,20 @@
                                         <option value="false">No</option>
                                     </select>
                                 </div>
-                                <div class="col-md-2">
+                                <div class="col-md-1">
                                     <label for="filterOpenSlots" class="form-label">Open Slots</label>
                                     <select class="form-select" id="filterOpenSlots" aria-label="Filter by open slots">
                                         <option value="">All</option>
                                         <option value="true">Has Open Slots</option>
                                         <option value="false">Full</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-1">
+                                    <label for="filterValidity" class="form-label">Validity</label>
+                                    <select class="form-select" id="filterValidity" aria-label="Filter by validity">
+                                        <option value="">All</option>
+                                        <option value="true">Valid</option>
+                                        <option value="false">Not Valid</option>
                                     </select>
                                 </div>
                                 <div class="col-md-1">
@@ -129,27 +139,24 @@
                             </div>
                         </div>
                         <div class="action-row">
-                            <form method="POST" action="{{ url_for('main.sort_students_route') }}" style="display: inline;">
-                                <button type="submit" class="btn btn-navy" 
-                                        onclick="return confirm('This will reassign all students based on their preferences. Are you sure?')">
-                                    Sort Students
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#confirmSortStudentsModal">
+                                Sort Students
+                            </button>
                             <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#moveStudentModal">Move Students</button>
                             <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#swapStudentsModal">Swap Students</button>
-                            <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">Upload CSV</button>
-                            
                         </div>
 
                         <!-- Group List -->
                         <div class="groups-list">
+                            {% if trips %}
                             {% for trip in trips %}
                             <div class="group-box"
                                  data-search-text="{{ trip.trip_name|lower }} {{ trip.trip_type|lower }}"
                                  data-trip-type="{{ trip.trip_type|lower }}"
                                  data-water="{{ 'true' if trip.water else 'false' }}"
                                  data-tent="{{ 'true' if trip.tent else 'false' }}"
-                                 data-open-slots="{{ 'true' if trip.has_open_slots else 'false' }}">
+                                 data-open-slots="{{ 'true' if trip.has_open_slots else 'false' }}"
+                                 data-valid="{{ 'true' if trip.validations.overall_valid else 'false' }}">
                                 <div class="group-box__header">
                                     {{ trip.trip_name }} ({{ trip.trip_type }})
                                     <span style="float: right; font-size: 0.9em; font-weight: normal; color: #666;">
@@ -270,6 +277,14 @@
                                 </div>
                             </div>
                         {% endfor %}
+                        <div id="noFilteredTripsMessage" class="alert alert-warning mt-3" role="status" style="display:none;">
+                            No trips match the current search or filter selections.
+                        </div>
+                        {% else %}
+                            <div class="alert alert-info mt-3" role="status">
+                                There are no trips to display yet.
+                            </div>
+                        {% endif %}
                     </div>
                 </main>
             </div>
@@ -284,17 +299,24 @@
                 <h5 class="modal-title" id="moveStudentModalLabel">Move Student</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-        
+
                 <form action="{{ url_for('main.move_student') }}" method="POST">
                 <div class="modal-body">
-                    <p class="text-center text-muted mb-4">Enter the student’s name and choose a new trip.</p>
-        
-                    <!-- Student Text Input -->
+                    <p class="text-center text-muted mb-4">Select a student and choose a new trip.</p>
+
+                    <!-- Student Dropdown -->
                     <div class="mb-3">
-                    <label for="student_name" class="form-label">Student Name or ID</label>
-                    <input type="text" class="form-control" id="student_name" name="student_name" placeholder="Type a student’s name or ID" required>
+                    <label for="student_name" class="form-label">Select Student</label>
+                    <select class="form-select" id="student_name" name="student_name" style="width: 100%;" required>
+                        <option value="">Select a student...</option>
+                        {% for student in students %}
+                            <option value="{{ student.id }}">
+                                {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+                            </option>
+                        {% endfor %}
+                    </select>
                     </div>
-        
+
                     <!-- Trip Dropdown -->
                     <div class="mb-3">
                     <label for="new_trip_id" class="form-label">Select New Trip</label>
@@ -305,9 +327,7 @@
                         {% endfor %}
                     </select>
                     </div>
-                </div>
-        
-                <div class="modal-footer">
+                </div>                <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn text-white" style="background-color: #003366;">Confirm Move</button>
                 </div>
@@ -315,8 +335,8 @@
             </div>
             </div>
         </div>
-  
-  
+
+
 
         <!-- Swap Students Modal -->
         <div class="modal fade" id="swapStudentsModal" tabindex="-1" aria-labelledby="swapStudentsModalLabel" aria-hidden="true">
@@ -326,34 +346,48 @@
                 <h5 class="modal-title" id="swapStudentsModalLabel">Swap Students</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-        
+
                 <form action="{{ url_for('main.swap_students') }}" method="POST">
                 <div class="modal-body">
-                    <p class="text-center text-muted mb-4">Enter the names of two students to swap their trips.</p>
-        
+                    <p class="text-center text-muted mb-4">Select two students to swap their trips.</p>
+
                     <div class="row align-items-center mb-4">
                     <!-- Student 1 -->
                     <div class="col-md-5">
                         <div class="bg-light p-4 rounded">
                         <label class="form-label fw-bold">Student 1</label>
-                        <input type="text" class="form-control" name="student1_name" placeholder="Enter Student 1 Name or ID" required>
+                        <select class="form-select" id="student1_name" name="student1_name" style="width: 100%;" required>
+                            <option value="">Select a student...</option>
+                            {% for student in students %}
+                                <option value="{{ student.id }}">
+                                    {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+                                </option>
+                            {% endfor %}
+                        </select>
                         </div>
                     </div>
-        
+
                     <div class="col-md-2 text-center">
                         <div style="font-size: 40px; color: #005fa3;">⇄</div>
                     </div>
-        
+
                     <!-- Student 2 -->
                     <div class="col-md-5">
                         <div class="bg-light p-4 rounded">
                         <label class="form-label fw-bold">Student 2</label>
-                        <input type="text" class="form-control" name="student2_name" placeholder="Enter Student 2 Name or ID" required>
+                        <select class="form-select" id="student2_name" name="student2_name" style="width: 100%;" required>
+                            <option value="">Select a student...</option>
+                            {% for student in students %}
+                                <option value="{{ student.id }}">
+                                    {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+                                </option>
+                            {% endfor %}
+                        </select>
                         </div>
                     </div>
                     </div>
                 </div>
-        
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn text-white" style="background-color: #005fa3;">Confirm Swap</button>
@@ -362,83 +396,38 @@
             </div>
             </div>
         </div>
-  
 
-        <!-- Upload CSV Modal -->
-        <div class="modal fade" id="uploadCSVModal" tabindex="-1" aria-labelledby="uploadCSVModalLabel" aria-hidden="true">
+
+        <!-- Confirm Sort Students Modal -->
+        <div class="modal fade" id="confirmSortStudentsModal" tabindex="-1" aria-labelledby="confirmSortStudentsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header" style="background-color:#003366;color:white;">
-                <h5 class="modal-title" id="uploadCSVModalLabel">Upload CSV File</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{{ url_for('main.upload_csv') }}" method="POST" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <p class="text-center text-muted mb-4">
-                    Upload a CSV file containing student and trip information.
-                    </p>
-                    <div class="mb-3">
-                    <label for="csvFile" class="form-label">Choose CSV File</label>
-                    <input class="form-control" type="file" id="csvFile" name="csv_file" accept=".csv" required>
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#003366;color:white;">
+                        <h5 class="modal-title" id="confirmSortStudentsModalLabel">Confirm Reassignment</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <form action="{{ url_for('main.sort_students_route') }}" method="POST">
+                        <div class="modal-body">
+                            <div class="alert alert-danger text-center mb-0" role="alert">
+                                <strong>Warning:</strong> This will reassign all students based on their preferences. This cannot be undone.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn text-white" style="background-color:#003366;">Reassign Students</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn text-white" style="background-color:#003366;">Upload</button>
-                </div>
-                </form>
-            </div>
             </div>
         </div>
-  
 
         <!-- Scripts -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script src="{{ url_for('static', filename='js/datatables-simple-demo.js') }}"></script>
         <script src="{{ url_for('static', filename='js/groups.js') }}"></script>
-        <script>
-            window.addEventListener('DOMContentLoaded', event => {
-                const tables = document.querySelectorAll('.datatables-table');
-                tables.forEach(table => new simpleDatatables.DataTable(table));
-            });
-        </script>
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                // Collect all student names from tables
-                const studentNames = [];
-                document.querySelectorAll('.datatables-table tbody tr').forEach(row => {
-                    const first = row.cells[1]?.textContent.trim();
-                    const last = row.cells[2]?.textContent.trim();
-                    if (first && last) studentNames.push(`${first} ${last}`);
-                });
-                const uniqueNames = [...new Set(studentNames)];
-            
-                // Helper: attach autocomplete dropdown to an input element
-                function attachAutocomplete(inputEl) {
-                    if (!inputEl) return;
-            
-                    const dataList = document.createElement('datalist');
-                    const listId = (inputEl.name || inputEl.id) + '-list';
-                    dataList.id = listId;
-            
-                    uniqueNames.forEach(name => {
-                        const option = document.createElement('option');
-                        option.value = name;
-                        dataList.appendChild(option);
-                    });
-            
-                    document.body.appendChild(dataList);
-                    inputEl.setAttribute('list', dataList.id);
-                }
-            
-                // Apply to Move + Swap inputs
-                attachAutocomplete(document.getElementById('student_name')); // Move
-                attachAutocomplete(document.querySelector('[name="student1_name"]')); // Swap 1
-                attachAutocomplete(document.querySelector('[name="student2_name"]')); // Swap 2
-            });
-            </script>
-            
-    
+
     </body>
 </html>

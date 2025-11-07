@@ -11,6 +11,32 @@ window.addEventListener('DOMContentLoaded', function() {
        dropdownParent: $('#removeStudentModal')
    });
 
+
+    // Initialize Select2 for move student dropdown
+    $(document).ready(function() {
+        $('#student_name').select2({
+            theme: "bootstrap-5",
+            dropdownParent: $('#moveStudentModal'),
+            placeholder: "Select a student...",
+            allowClear: true
+        });
+
+        // Initialize Select2 for swap student dropdowns
+        $('#student1_name').select2({
+            theme: "bootstrap-5",
+            dropdownParent: $('#swapStudentsModal'),
+            placeholder: "Select a student...",
+            allowClear: true
+        });
+
+        $('#student2_name').select2({
+            theme: "bootstrap-5",
+            dropdownParent: $('#swapStudentsModal'),
+            placeholder: "Select a student...",
+            allowClear: true
+        });
+    });
+
    // When the "Next" button in the first remove modal is clicked
    $('#openConfirmModalBtn').on('click', function() {
        // Get the selected student's ID and Name

@@ -5,6 +5,31 @@ window.addEventListener('DOMContentLoaded', event => {
         new simpleDatatables.DataTable(table);
     });
 
+    // Initialize Select2 for move student dropdown
+    $(document).ready(function() {
+        $('#student_name').select2({
+            theme: "bootstrap-5",
+            dropdownParent: $('#moveStudentModal'),
+            placeholder: "Select a student...",
+            allowClear: true
+        });
+
+        // Initialize Select2 for swap student dropdowns
+        $('#student1_name').select2({
+            theme: "bootstrap-5",
+            dropdownParent: $('#swapStudentsModal'),
+            placeholder: "Select a student...",
+            allowClear: true
+        });
+
+        $('#student2_name').select2({
+            theme: "bootstrap-5",
+            dropdownParent: $('#swapStudentsModal'),
+            placeholder: "Select a student...",
+            allowClear: true
+        });
+    });
+
     // Search and filter functionality for groups
     const searchInput = document.getElementById('groupSearch');
     const clearSearchBtn = document.getElementById('clearSearch');
@@ -12,6 +37,7 @@ window.addEventListener('DOMContentLoaded', event => {
     const filterWater = document.getElementById('filterWater');
     const filterTent = document.getElementById('filterTent');
     const filterOpenSlots = document.getElementById('filterOpenSlots');
+    const filterValidity = document.getElementById('filterValidity');
     const clearFiltersBtn = document.getElementById('clearFilters');
     const groupBoxes = document.querySelectorAll('.group-box');
 
@@ -22,10 +48,12 @@ window.addEventListener('DOMContentLoaded', event => {
         const waterFilter = filterWater.value;
         const tentFilter = filterTent.value;
         const openSlotsFilter = filterOpenSlots.value;
+        const validityFilter = filterValidity.value;
 
         // Show/hide clear search button
         clearSearchBtn.style.display = searchTerm ? 'block' : 'none';
 
+        let visibleCount = 0;
         groupBoxes.forEach(box => {
             let matches = true;
 
@@ -69,9 +97,30 @@ window.addEventListener('DOMContentLoaded', event => {
                 }
             }
 
+            // Validity filter
+            if (matches && validityFilter) {
+                const valid = box.getAttribute('data-valid') || '';
+                if (valid !== validityFilter) {
+                    matches = false;
+                }
+            }
+
             // Show or hide the box
             box.style.display = matches ? '' : 'none';
+            if (matches) {
+                visibleCount++;
+            }
         });
+
+        // Toggle "no filtered trips" message if applicable
+        const noFilteredMsg = document.getElementById('noFilteredTripsMessage');
+        if (noFilteredMsg) {
+            if (groupBoxes.length > 0 && visibleCount === 0) {
+                noFilteredMsg.style.display = '';
+            } else {
+                noFilteredMsg.style.display = 'none';
+            }
+        }
     }
 
     // Search input events
@@ -89,6 +138,7 @@ window.addEventListener('DOMContentLoaded', event => {
     filterWater.addEventListener('change', filterGroups);
     filterTent.addEventListener('change', filterGroups);
     filterOpenSlots.addEventListener('change', filterGroups);
+    filterValidity.addEventListener('change', filterGroups);
 
     // Clear all filters button
     clearFiltersBtn.addEventListener('click', function() {
@@ -97,6 +147,7 @@ window.addEventListener('DOMContentLoaded', event => {
         filterWater.value = '';
         filterTent.value = '';
         filterOpenSlots.value = '';
+        filterValidity.value = '';
         filterGroups();
     });
 
