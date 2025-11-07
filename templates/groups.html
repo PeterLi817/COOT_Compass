@@ -385,5 +385,42 @@
                 tables.forEach(table => new simpleDatatables.DataTable(table));
             });
         </script>
+        <script>
+            window.addEventListener('DOMContentLoaded', () => {
+                // Collect all student names from tables
+                const studentNames = [];
+                document.querySelectorAll('.datatables-table tbody tr').forEach(row => {
+                    const first = row.cells[1]?.textContent.trim();
+                    const last = row.cells[2]?.textContent.trim();
+                    if (first && last) studentNames.push(`${first} ${last}`);
+                });
+                const uniqueNames = [...new Set(studentNames)];
+            
+                // Helper: attach autocomplete dropdown to an input element
+                function attachAutocomplete(inputEl) {
+                    if (!inputEl) return;
+            
+                    const dataList = document.createElement('datalist');
+                    const listId = (inputEl.name || inputEl.id) + '-list';
+                    dataList.id = listId;
+            
+                    uniqueNames.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        dataList.appendChild(option);
+                    });
+            
+                    document.body.appendChild(dataList);
+                    inputEl.setAttribute('list', dataList.id);
+                }
+            
+                // Apply to Move + Swap inputs
+                attachAutocomplete(document.getElementById('student_name')); // Move
+                attachAutocomplete(document.querySelector('[name="student1_name"]')); // Swap 1
+                attachAutocomplete(document.querySelector('[name="student2_name"]')); // Swap 2
+            });
+            </script>
+            
+    
     </body>
 </html>
