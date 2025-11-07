@@ -58,6 +58,19 @@
                 <main>
                     <div class="container-fluid px-4">
                         <h1 class="mt-4">Groups</h1>
+                        
+                        <!-- Flash Messages for Groups Page -->
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ 'danger' if category == 'danger' else 'success' if category == 'success' else 'warning' if category == 'warning' else 'info' }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+                        
                         <div class="mb-3">
                             <div class="row g-3 align-items-end">
                                 <div class="col-md-3">
@@ -116,7 +129,12 @@
                             </div>
                         </div>
                         <div class="action-row">
-                            <button class="btn btn-navy">Sort Students</button>
+                            <form method="POST" action="{{ url_for('main.sort_students_route') }}" style="display: inline;">
+                                <button type="submit" class="btn btn-navy" 
+                                        onclick="return confirm('This will reassign all students based on their preferences. Are you sure?')">
+                                    Sort Students
+                                </button>
+                            </form>
                             <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#moveStudentModal">Move Students</button>
                             <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#swapStudentsModal">Swap Students</button>
                             <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">Upload CSV</button>

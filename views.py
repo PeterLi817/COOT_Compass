@@ -3,6 +3,7 @@ from models import Student, Trip, db
 from flask_login import login_required
 import csv
 from io import StringIO
+from sort import sort_students
 
 main = Blueprint('main', __name__)
 
@@ -333,6 +334,28 @@ def upload_csv():
 
     return redirect(url_for('main.groups'))
 
+@main.route('/sort-students', methods=['POST'])
+@login_required
+def sort_students_route():
+    """Handle the Sort Students button click."""
+    try:
+        # Run the intelligent sorting algorithm
+        stats = sort_students()
+        
+        # Commit all changes to database
+        db.session.commit()
+        
+        # Flash success message with statistics - will show on Groups page
+        flash(f'🎯 Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
+              f'{stats["first_choice_rate"]:.1f}% got first choice, '
+              f'{stats["assignment_rate"]:.1f}% total placement rate.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
+    
+    return redirect(url_for('main.groups'))
+
 def validate_trip(trip):
     """Validate a trip and return validation results."""
     students = trip.students
@@ -361,7 +384,7 @@ def validate_trip(trip):
 
     athletic_teams = {}
     for student in students:
-        if student.athletic_team and student.athletic_team.lower() != 'n/a':
+        if student.athletic_team and student.athletic_team.lower() not in ['n/a', 'none', '', 'null']:
             team = student.athletic_team
             athletic_teams.setdefault(team, []).append(f"{student.first_name} {student.last_name}")
 
