@@ -50,7 +50,7 @@ def add_student():
             flash('Error: Missing required fields.', 'danger')
             return redirect(url_for('main.first_years'))
 
-          if Student.query.filter((Student.student_id == student_id) | (Student.email == email)).first():
+        if Student.query.filter((Student.student_id == student_id) | (Student.email == email)).first():
             flash('Error: Student with that ID or Email already exists.', 'danger')
             return redirect(url_for('main.first_years'))
 
