@@ -283,6 +283,16 @@ def upload_csv():
             trip_name = (row.get('trip_name') or '').strip()
             trip_type = (row.get('trip_type') or '').strip()
             email = (row.get('email') or '').strip()
+            trip_pref_1 = (row.get('trip_pref_1') or '').strip()
+            trip_pref_2 = (row.get('trip_pref_2') or '').strip()
+            trip_pref_3 = (row.get('trip_pref_3') or '').strip()
+            notes = (row.get('notes') or '').strip()
+
+            # Handle boolean fields
+            poc_value = (row.get('poc') or '').strip().lower()
+            poc = poc_value in ['true', '1', 'yes']
+            fli_international_value = (row.get('fli_international') or '').strip().lower()
+            fli_international = fli_international_value in ['true', '1', 'yes']
 
             trip = Trip.query.filter_by(trip_name=trip_name).first()
             if not trip:
@@ -310,6 +320,12 @@ def upload_csv():
                     water_comfort=water_comfort,
                     tent_comfort=tent_comfort,
                     email=email,
+                    trip_pref_1=trip_pref_1,
+                    trip_pref_2=trip_pref_2,
+                    trip_pref_3=trip_pref_3,
+                    notes=notes,
+                    poc=poc,
+                    fli_international=fli_international,
                     trip_id=trip.id
                 )
                 db.session.add(student)
@@ -323,6 +339,12 @@ def upload_csv():
                 student.water_comfort = water_comfort
                 student.tent_comfort = tent_comfort
                 student.email = email
+                student.trip_pref_1 = trip_pref_1
+                student.trip_pref_2 = trip_pref_2
+                student.trip_pref_3 = trip_pref_3
+                student.notes = notes
+                student.poc = poc
+                student.fli_international = fli_international
                 student.trip_id = trip.id
 
         db.session.commit()
@@ -341,19 +363,19 @@ def sort_students_route():
     try:
         # Run the intelligent sorting algorithm
         stats = sort_students()
-        
+
         # Commit all changes to database
         db.session.commit()
-        
+
         # Flash success message with statistics - will show on Groups page
         flash(f'🎯 Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
               f'{stats["first_choice_rate"]:.1f}% got first choice, '
               f'{stats["assignment_rate"]:.1f}% total placement rate.', 'success')
-        
+
     except Exception as e:
         db.session.rollback()
         flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
-    
+
     return redirect(url_for('main.groups'))
 
 def validate_trip(trip):
