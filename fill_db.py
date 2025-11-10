@@ -7,10 +7,11 @@ fake = Faker()
 def add_fake_data():
     # --- Admin ---
     if not User.query.filter_by(email='admin@colby.edu').first():
-        admin = User(email='admin@colby.edu', role='admin')
+        admin = User(email='admin@colby.edu', first_name='Admin', last_name='User', role='admin')
         admin.set_password('1234')
         db.session.add(admin)
         db.session.commit()
+        print('added')
 
     # Common trip definitions
     trip_types = [

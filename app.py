@@ -15,8 +15,8 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 
 @login_manager.user_loader
-def load_user(id):
-    return User.query.get(int(id))
+def load_user(email):
+    return User.query.get(email)
 
 app.register_blueprint(main)
 app.register_blueprint(auth_blueprint)
@@ -24,6 +24,6 @@ app.register_blueprint(auth_blueprint)
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()  # Create database tables
-        # add_fake_data()
+        add_fake_data()
 
     app.run(debug=True)
