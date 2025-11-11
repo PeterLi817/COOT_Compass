@@ -10,13 +10,18 @@ db = SQLAlchemy()
 class User(db.Model, UserMixin):
     __tablename__ = 'users'
 
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
+    email = db.Column(db.String(120), primary_key=True)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(20), nullable=False)  # admin or student
+    role = db.Column(db.String(20))  # admin, student, or none
 
     # One-to-one relationship with Student
     student = db.relationship('Student', backref='user', uselist=False)
+
+    def get_id(self):
+        """Override get_id to return email instead of id for Flask-Login."""
+        return self.email
 
     def set_password(self, password):
         """Hash the password and store it."""
@@ -27,7 +32,7 @@ class User(db.Model, UserMixin):
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f"<User id={self.id} email='{self.email}' role='{self.role}'>"
+        return f"<User email='{self.email}' role='{self.role}'>"
 
 
 # -----------------------
@@ -57,8 +62,10 @@ class Student(db.Model):
     poc = db.Column(db.Boolean)
     fli_international = db.Column(db.Boolean)
 
-    # One-to-one with User (nullable since not all students may have accounts)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    # One-to-one with User (nullable since not all students may have accounts).
+    # NOTE: There is also a separate 'email' field for the student's own email address.
+    # If you truly want strict 1:1 (no two students linked to same user), add unique=True.
+    user_email = db.Column(db.String(120), db.ForeignKey('users.email', ondelete='SET NULL'), nullable=True, unique=True)
 
     def __repr__(self):
         return f"<Student id={self.id} name='{self.first_name} {self.last_name}' trip_id={self.trip_id}>"
