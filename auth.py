@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash
-from flask import request
+from flask import request, session
 from models import db, User
-from flask_login import login_user, login_required, logout_user
+from flask_login import login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
 import os
 
@@ -9,7 +9,13 @@ auth_blueprint = Blueprint('auth', __name__)
 
 oauth = OAuth()
 google = None
-AUTH_REDIRECT_URI = '/login/callback'
+AUTH_REDIRECT_URI = 'auth.authorize'
+
+@auth_blueprint.route('/')
+def login_page():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.groups'))
+    return render_template('login.html')
 
 
 def init_oauth(app):
@@ -50,15 +56,20 @@ def authorize():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo', token=token)
     google_user = resp.json()
+    print(google_user)
 
     app_user = get_user(google_user['email'])
     if not app_user:
         app_user = create_new_user(google_user)
 
     login_user(app_user)
-    session[USER_KEY] = app_user.id
-    return redirect(HOME_PREFIX)
+    return redirect(url_for('main.groups'))
 
+@auth_blueprint.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('auth.login_page'))
 
 def get_user(email):
     """
@@ -80,23 +91,3 @@ def create_new_user(user):
     db.session.add(new_user)
     db.session.commit()
     return new_user
-
-@auth_blueprint.route('/login', methods=['GET', 'POST'])
-def login():
-  if request.method == 'POST':
-      email = request.form['email']
-      password = request.form['password']
-      user = User.query.filter_by(email=email).first()
-      if user and user.check_password(password):
-          login_user(user)
-          return redirect(url_for('main.groups'))
-      else:
-          flash('Invalid email or password. Please try again.')
-          return redirect(url_for('auth.login'))
-  return render_template('login.html')
-
-@auth_blueprint.route('/logout')
-@login_required
-def logout():
-    logout_user()
-    return redirect(url_for('auth.login'))
