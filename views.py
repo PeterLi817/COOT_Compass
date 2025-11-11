@@ -4,6 +4,7 @@ from flask_login import login_required
 import csv
 from io import StringIO
 from sort import sort_students
+import json
 
 main = Blueprint('main', __name__)
 
@@ -25,7 +26,32 @@ def first_years():
     trips = Trip.query.all()
     unique_trip_types_query = db.session.query(Trip.trip_type).distinct().order_by(Trip.trip_type)
     unique_trip_types = [t[0] for t in unique_trip_types_query]
-    return render_template('first-years.html', students=students, trips=trips, unique_trip_types=unique_trip_types)
+
+    # Create a dictionary mapping student IDs to their data for JSON
+    students_data = {}
+    for student in students:
+        students_data[str(student.id)] = {
+            'id': student.id,
+            'student_id': student.student_id,
+            'email': student.email,
+            'first_name': student.first_name,
+            'last_name': student.last_name,
+            'dorm': student.dorm or '',
+            'athletic_team': student.athletic_team or '',
+            'hometown': student.hometown or '',
+            'notes': student.notes or '',
+            'poc': student.poc if student.poc is not None else False,
+            'fli_international': student.fli_international if student.fli_international is not None else False,
+            'trip_pref_1': student.trip_pref_1 or '',
+            'trip_pref_2': student.trip_pref_2 or '',
+            'trip_pref_3': student.trip_pref_3 or '',
+            'gender': student.gender or '',
+            'water_comfort': str(student.water_comfort) if student.water_comfort is not None else '',
+            'tent_comfort': str(student.tent_comfort) if student.tent_comfort is not None else '',
+            'trip_id': student.trip_id
+        }
+
+    return render_template('first-years.html', students=students, trips=trips, unique_trip_types=unique_trip_types, students_data_json=json.dumps(students_data))
 
 @main.route('/groups')
 @login_required
@@ -73,8 +99,8 @@ def add_student():
             athletic_team=request.form.get('athletic_team'),
             notes=request.form.get('notes'),
             gender=request.form.get('gender'),
-            water_comfort=request.form.get('water-comfort'),
-            tent_comfort=request.form.get('tent-comfort'),
+            water_comfort=int(request.form.get('water_comfort')) if request.form.get('water_comfort') else None,
+            tent_comfort=int(request.form.get('tent_comfort')) if request.form.get('tent_comfort') else None,
             hometown=request.form.get('hometown'),
             poc=poc,
             fli_international=fli_international,
@@ -90,6 +116,82 @@ def add_student():
             flash(f'Error adding student: {str(e)}', 'danger')
 
         return redirect(url_for('main.first_years'))
+
+    return redirect(url_for('main.first_years'))
+
+@main.route('/edit-student', methods=['POST'])
+@login_required
+def edit_student():
+    # Get the database primary key (id) from the hidden form field
+    student_db_id = request.form.get('student_id')
+
+    if not student_db_id:
+        flash('Error: Student ID is required.', 'danger')
+        return redirect(url_for('main.first_years'))
+
+    # Query by database primary key (id), not by student_id field
+    try:
+        student = Student.query.get(int(student_db_id))
+    except (ValueError, TypeError):
+        student = None
+
+    if not student:
+        flash('Error: Student not found.', 'danger')
+        return redirect(url_for('main.first_years'))
+
+    # Get form data
+    student_id_field = request.form.get('student_id_field')
+    email = request.form.get('email')
+    first_name = request.form.get('first_name')
+    last_name = request.form.get('last_name')
+
+    # Validate required fields
+    if not student_id_field or not email or not first_name or not last_name:
+        flash('Error: Missing required fields.', 'danger')
+        return redirect(url_for('main.first_years'))
+
+    # Check if student_id or email is being changed to a value that already exists (for a different student)
+    if student_id_field != student.student_id:
+        if Student.query.filter(Student.student_id == student_id_field, Student.id != student.id).first():
+            flash('Error: Student ID already exists for another student.', 'danger')
+            return redirect(url_for('main.first_years'))
+
+    if email != student.email:
+        if Student.query.filter(Student.email == email, Student.id != student.id).first():
+            flash('Error: Email already exists for another student.', 'danger')
+            return redirect(url_for('main.first_years'))
+
+
+    # Update student fields
+    student.student_id = student_id_field
+    student.email = email
+    student.first_name = first_name
+    student.last_name = last_name
+    student.trip_pref_1 = request.form.get('trip_pref_1') or None
+    student.trip_pref_2 = request.form.get('trip_pref_2') or None
+    student.trip_pref_3 = request.form.get('trip_pref_3') or None
+    student.dorm = request.form.get('dorm') or None
+    student.athletic_team = request.form.get('athletic_team') or None
+    student.gender = request.form.get('gender') or None
+    student.hometown = request.form.get('hometown') or None
+    water_comfort_val = request.form.get('water_comfort')
+    student.water_comfort = int(water_comfort_val) if water_comfort_val else None
+    tent_comfort_val = request.form.get('tent_comfort')
+    student.tent_comfort = int(tent_comfort_val) if tent_comfort_val else None
+    student.notes = request.form.get('notes') or None
+    student.poc = request.form.get('poc') == 'true'
+    student.fli_international = request.form.get('fli_international') == 'true'
+
+    # Handle trip assignment
+    assigned_trip = request.form.get('assigned-trip')
+    student.trip_id = int(assigned_trip) if assigned_trip else None
+
+    try:
+        db.session.commit()
+        flash('Student updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating student: {str(e)}', 'danger')
 
     return redirect(url_for('main.first_years'))
 
