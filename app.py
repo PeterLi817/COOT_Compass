@@ -7,8 +7,14 @@ from flask_login import LoginManager
 from auth import init_oauth
 import os
 
+# Load variables from .env file (initial load)
+# Remove for production use
+from dotenv import load_dotenv
+load_dotenv()
+
 app = Flask(__name__)
 SECRET_KEY = os.getenv('SECRET_KEY')
+print(SECRET_KEY)
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable must be set")
 app.config['SECRET_KEY'] = SECRET_KEY
