@@ -5,10 +5,14 @@ from fill_db import add_fake_data #for development purposes
 from auth import auth_blueprint
 from flask_login import LoginManager
 from auth import init_oauth
+import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'my_secret_key' # Simple for development, replace in production
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable must be set")
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///coot.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 

@@ -23,11 +23,17 @@ def init_oauth(app):
     global google
     oauth.init_app(app)
 
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+
+    if not client_id or not client_secret:
+        raise ValueError("GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set")
+
     google = oauth.register(
         name="google",
         server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-        client_id=os.getenv('GOOGLE_CLIENT_ID'),
-        client_secret=os.getenv('GOOGLE_CLIENT_SECRET'),
+        client_id=client_id,
+        client_secret=client_secret,
         client_kwargs={"scope": "openid email profile"},
     )
 
@@ -56,7 +62,6 @@ def authorize():
     token = google.authorize_access_token()
     resp = google.get('https://www.googleapis.com/oauth2/v1/userinfo', token=token)
     google_user = resp.json()
-    print(google_user)
 
     app_user = get_user(google_user['email'])
     if not app_user:
