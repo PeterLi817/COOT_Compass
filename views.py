@@ -17,7 +17,21 @@ def index():
 @login_required
 def trips():
     trips = Trip.query.all()
-    return render_template('trips.html', trips=trips)
+
+    # Create a dictionary mapping trip IDs to their data for JSON
+    trips_data = {}
+    for trip in trips:
+        trips_data[str(trip.id)] = {
+            'id': trip.id,
+            'trip_name': trip.trip_name,
+            'trip_type': trip.trip_type,
+            'capacity': trip.capacity,
+            'address': trip.address or '',
+            'water': trip.water if trip.water is not None else False,
+            'tent': trip.tent if trip.tent is not None else False
+        }
+
+    return render_template('trips.html', trips=trips, trips_data_json=json.dumps(trips_data))
 
 @main.route('/first-years')
 @login_required
@@ -278,6 +292,62 @@ def add_trip():
             flash(f'Error: Could not add trip. {str(e)}', 'danger')
 
         return redirect(url_for('main.trips'))
+
+    return redirect(url_for('main.trips'))
+
+@main.route('/edit-trip', methods=['POST'])
+@login_required
+def edit_trip():
+    trip_id = request.form.get('trip_id')
+
+    if not trip_id:
+        flash('Error: Trip ID is required.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    # Query by database primary key (id)
+    try:
+        trip = Trip.query.get(int(trip_id))
+    except (ValueError, TypeError):
+        trip = None
+
+    if not trip:
+        flash('Error: Trip not found.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    trip_name = request.form.get('trip_name')
+    trip_type = request.form.get('trip_type')
+    capacity = request.form.get('capacity')
+
+    if not trip_name or not trip_type or not capacity:
+        flash('Error: Missing required fields.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    try:
+        capacity = int(capacity)
+        if capacity < 1:
+            raise ValueError("Capacity must be at least 1")
+    except ValueError:
+        flash('Error: Capacity must be a positive integer.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    if trip_name != trip.trip_name:
+        if Trip.query.filter(Trip.trip_name == trip_name, Trip.id != trip.id).first():
+            flash(f'Error: A trip with the name "{trip_name}" already exists.', 'danger')
+            return redirect(url_for('main.trips'))
+
+    trip.trip_name = trip_name
+    trip.trip_type = trip_type
+    trip.capacity = capacity
+    trip.address = request.form.get('address')
+    trip.water = request.form.get('water') == 'true'
+    trip.tent = request.form.get('tent') == 'true'
+
+    try:
+        db.session.commit()
+        flash('Trip updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating trip: {str(e)}', 'danger')
 
     return redirect(url_for('main.trips'))
 
