@@ -1,9 +1,13 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
+from flask import Blueprint, render_template, redirect, url_for, request, flash, Response, send_file
 from models import Student, Trip, db
 from flask_login import login_required
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
 import csv
+import io
 from io import StringIO
 from sort import sort_students
+from datetime import datetime
 
 main = Blueprint('main', __name__)
 
@@ -473,3 +477,122 @@ def validate_trip(trip):
             validations['overall_valid'] = False
 
     return validations
+
+
+
+@main.route('/export_csv')
+@login_required
+def export_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow(['Trip Name', 'Trip Type', 'Student ID', 'First Name', 'Last Name', 'Gender', 'Athletic Team', 'Dorm', 'Hometown'])
+
+    trips = sorted(
+    Trip.query.all(),
+    key=lambda t: int(''.join(filter(str.isdigit, t.trip_name)) or 0)
+)
+
+
+    for trip in trips:
+        for student in trip.students:
+            writer.writerow([
+                trip.trip_name,
+                trip.trip_type,
+                student.student_id,
+                student.first_name,
+                student.last_name,
+                student.gender or '',
+                student.athletic_team or '',
+                student.dorm or '',
+                student.hometown or ''
+            ])
+
+    output.seek(0)
+    timestamp = datetime.now().strftime("%b-%d-%Y_%I-%M%p")
+    filename = f"trip_rosters_{timestamp}.csv"
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+
+
+@main.route('/export_pdf')
+@login_required
+def export_pdf():
+    try:
+        pdf_buffer = io.BytesIO()
+        p = canvas.Canvas(pdf_buffer, pagesize=letter)
+        width, height = letter
+
+        trips = sorted(
+        Trip.query.all(),
+        key=lambda t: int(''.join(filter(str.isdigit, t.trip_name)) or 0)
+    )
+
+
+        if not trips:
+            p.setFont("Helvetica-Bold", 14)
+            p.drawString(50, height - 50, "No trip data available.")
+        else:
+            first_page = True
+
+            for trip in trips:
+                # Start a new page for every trip except the first
+                if not first_page:
+                    p.showPage()
+                first_page = False
+
+                # Reset vertical position for this page
+                y = height - 80
+
+                # Title
+                p.setFont("Helvetica-Bold", 16)
+                p.drawString(150, height - 50, "Trip Roster")
+
+                # Trip header
+                p.setFont("Helvetica-Bold", 12)
+                p.drawString(50, y, f"Trip: {trip.trip_name} ({trip.trip_type})")
+                y -= 20
+
+                p.setFont("Helvetica", 10)
+                p.drawString(70, y, f"Capacity: {len(trip.students)}/{trip.capacity}")
+                y -= 20
+
+                p.setFont("Helvetica-Bold", 11)
+                p.drawString(70, y, "Students:")
+                y -= 15
+
+                p.setFont("Helvetica", 10)
+
+                for student in trip.students:
+                    line = (
+                        f"- {student.first_name} {student.last_name}, "
+                        f"{student.gender or ''}, "
+                        f"{student.athletic_team or ''}, "
+                        f"{student.dorm or ''}"
+                    )
+                    p.drawString(90, y, line)
+                    y -= 15
+
+                    # If running out of space, start new page
+                    if y < 80:
+                        p.showPage()
+                        y = height - 80
+
+        p.save()
+        pdf_buffer.seek(0)
+
+        timestamp = datetime.now().strftime("%b-%d-%Y_%I-%M%p")
+        filename = f"trip_rosters_{timestamp}.pdf"
+        return send_file(
+            pdf_buffer,
+            as_attachment=True,
+            download_name=filename,
+            mimetype="application/pdf"
+        )
+
+    except Exception as e:
+        return f"Error generating PDF: {str(e)}", 500
