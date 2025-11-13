@@ -7,11 +7,6 @@ from sort import sort_students
 
 main = Blueprint('main', __name__)
 
-@main.route('/')
-@login_required
-def index():
-    return redirect(url_for('main.groups'))
-
 @main.route('/trips')
 @login_required
 def trips():
