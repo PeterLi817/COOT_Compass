@@ -1,11 +1,16 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from models import Student, Trip, db
-from flask_login import login_required
+from flask_login import login_required, current_user
 import csv
 from io import StringIO
 from sort import sort_students
 
 main = Blueprint('main', __name__)
+
+@main.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html',current_user=current_user)
 
 @main.route('/trips')
 @login_required
