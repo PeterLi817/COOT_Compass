@@ -4,22 +4,34 @@ from flask_login import login_required, current_user
 import csv
 from io import StringIO
 from sort import sort_students
+from static.utils.decorators import manager_required, admin_required, student_required
+from datetime import datetime
 
 main = Blueprint('main', __name__)
 
 @main.route('/settings')
-@login_required
+@admin_required
 def settings():
     return render_template('settings.html',current_user=current_user)
 
-@main.route('/trips')
+@main.route('/student_view')
+@student_required
+def student_view():
+    return render_template('student_view.html', current_user=current_user, now=datetime.now())
+
+@main.route('/no_access')
 @login_required
+def no_access():
+    return render_template('no_view.html', current_user=current_user, now=datetime.now())
+
+@main.route('/trips')
+@admin_required
 def trips():
     trips = Trip.query.all()
     return render_template('trips.html', trips=trips)
 
 @main.route('/first-years')
-@login_required
+@admin_required
 def first_years():
     students = Student.query.all()
     trips = Trip.query.all()
@@ -28,7 +40,7 @@ def first_years():
     return render_template('first-years.html', students=students, trips=trips, unique_trip_types=unique_trip_types)
 
 @main.route('/groups')
-@login_required
+@admin_required
 def groups():
     trips = Trip.query.all()
     students = Student.query.all()
@@ -40,7 +52,7 @@ def groups():
     return render_template('groups.html', trips=trips, students=students)
 
 @main.route('/add-student', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def add_student():
     if request.method == 'POST':
         student_id = request.form.get('student_id')
@@ -94,7 +106,7 @@ def add_student():
     return redirect(url_for('main.first_years'))
 
 @main.route('/remove-student', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def remove_student():
    if request.method == 'POST':
        student_id_to_remove = request.form.get('student_id')
@@ -124,7 +136,7 @@ def remove_student():
    return redirect(url_for('main.first_years'))
 
 @main.route('/add-trip', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def add_trip():
     if request.method == 'POST':
         # Get required data from the form
@@ -180,7 +192,7 @@ def add_trip():
     return redirect(url_for('main.trips'))
 
 @main.route('/remove-trip', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def remove_trip():
    if request.method == 'POST':
        trip_id_to_remove = request.form.get('trip_id')
@@ -213,7 +225,7 @@ def remove_trip():
 
 
 @main.route('/move-student', methods=['POST'])
-@login_required
+@admin_required
 def move_student():
     student_input = request.form.get('student_name', '').strip()
     new_trip_id = request.form.get('new_trip_id')
@@ -246,7 +258,7 @@ def move_student():
     return redirect(url_for('main.groups'))
 
 @main.route('/swap-students', methods=['POST'])
-@login_required
+@admin_required
 def swap_students():
     s1_input = (request.form.get('student1_name') or "").strip()
     s2_input = (request.form.get('student2_name') or "").strip()
@@ -283,6 +295,7 @@ def swap_students():
     return redirect(url_for('main.groups'))
 
 @main.route('/upload_csv', methods=['POST'])
+@admin_required
 def upload_csv():
     file = request.files.get('csv_file')
     if not file:
@@ -391,7 +404,7 @@ def upload_csv():
     return redirect(url_for('main.first_years'))
 
 @main.route('/sort-students', methods=['POST'])
-@login_required
+@admin_required
 def sort_students_route():
     """Handle the Sort Students button click."""
     try:
