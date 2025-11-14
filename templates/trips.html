@@ -101,7 +101,7 @@
                                             <td>{{ 'Yes' if trip.water else 'No' }}</td>
                                             <td>{{ 'Yes' if trip.tent else 'No' }}</td>
                                             <td>
-                                                <button class="btn btn-sm btn-primary edit-trip-btn" data-trip-id="{{ trip.id }}" data-bs-toggle="modal" data-bs-target="#editTripModal">
+                                                <button class="btn btn-sm btn-primary edit-trip-btn" data-trip-id="{{ trip.id }}" data-bs-toggle="modal" data-bs-target="#addTripModal">
                                                     <i class="fas fa-edit"></i> Edit
                                                 </button>
                                             </td>
@@ -122,7 +122,8 @@
                         <h5 class="modal-title" id="addTripModalLabel">Add New Trip</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form action="{{ url_for('main.add_trip') }}" method="POST">
+                    <form id="tripForm" action="{{ url_for('main.add_trip') }}" method="POST">
+                        <input type="hidden" id="trip_db_id" name="trip_id" value="">
                         <div class="modal-body">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -173,74 +174,8 @@
                             <small class="text-muted">Fields marked with * are required.</small>
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary">Save Trip</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal fade" id="editTripModal" tabindex="-1" aria-labelledby="editTripModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="editTripModalLabel">Edit Trip</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form action="{{ url_for('main.edit_trip') }}" method="POST">
-                        <input type="hidden" id="edit_trip_id" name="trip_id" value="">
-                        <div class="modal-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="edit_trip_name" class="form-label">Trip Name*</label>
-                                    <input type="text" class="form-control" id="edit_trip_name" name="trip_name" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="edit_trip_type" class="form-label">Trip Type*</label>
-                                    <select id="edit_trip_type" name="trip_type" class="form-select" required>
-                                        <option value="">Select an option</option>
-                                        <option value="backpacking">Backpacking</option>
-                                        <option value="canoeing">Canoeing</option>
-                                        <option value="basecamp">Basecamp</option>
-                                        <option value="classic maine camp">Classic Maine Camp</option>
-                                        <option value="local exploration">Local Exploration</option>
-                                        <option value="specialty basecamp">Specialty Basecamp</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="edit_capacity" class="form-label">Capacity*</label>
-                                    <input type="number" class="form-control" id="edit_capacity" name="capacity" min="1" required>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="edit_address" class="form-label">Address</label>
-                                    <input type="text" class="form-control" id="edit_address" name="address">
-                                </div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check mt-4">
-                                        <input class="form-check-input" type="checkbox" value="true" id="edit_water" name="water">
-                                        <label class="form-check-label" for="edit_water">
-                                            Water Trip
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check mt-4">
-                                        <input class="form-check-input" type="checkbox" value="true" id="edit_tent" name="tent">
-                                        <label class="form-check-label" for="edit_tent">
-                                            Tent Trip
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <small class="text-muted">Fields marked with * are required.</small>
-                        </div>
-                        <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                            <button type="submit" class="btn btn-primary" id="tripSubmitBtn">Save Trip</button>
                         </div>
                     </form>
                 </div>

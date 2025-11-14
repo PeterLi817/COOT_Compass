@@ -132,7 +132,7 @@ def add_student():
 @login_required
 def edit_student():
     # Get the database primary key (id) from the hidden form field
-    student_db_id = request.form.get('student_id')
+    student_db_id = request.form.get('student_db_id')
 
     if not student_db_id:
         flash('Error: Student ID is required.', 'danger')
@@ -148,8 +148,8 @@ def edit_student():
         flash('Error: Student not found.', 'danger')
         return redirect(url_for('main.first_years'))
 
-    # Get form data
-    student_id_field = request.form.get('student_id_field')
+    # Get form data - check for student_id_field first (edit mode), then fall back to student_id (add mode)
+    student_id_field = request.form.get('student_id_field') or request.form.get('student_id')
     email = request.form.get('email')
     first_name = request.form.get('first_name')
     last_name = request.form.get('last_name')

@@ -36,54 +36,70 @@ window.addEventListener('DOMContentLoaded', function() {
             allowClear: true
         });
 
-        // Initialize Select2 for edit student modal dropdowns
-        $('#edit_trip_pref_1').select2({
+        // Initialize Select2 for add/edit student modal dropdowns (using addStudentModal)
+        $('#trip_pref_1').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#editStudentModal'),
+            dropdownParent: $('#addStudentModal'),
             placeholder: "Select an option...",
             allowClear: true
         });
 
-        $('#edit_trip_pref_2').select2({
+        $('#trip_pref_2').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#editStudentModal'),
+            dropdownParent: $('#addStudentModal'),
             placeholder: "Select an option...",
             allowClear: true
         });
 
-        $('#edit_trip_pref_3').select2({
+        $('#trip_pref_3').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#editStudentModal'),
+            dropdownParent: $('#addStudentModal'),
             placeholder: "Select an option...",
             allowClear: true
         });
 
-        $('#edit_assigned-trip').select2({
+        $('#assigned-trip').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#editStudentModal'),
+            dropdownParent: $('#addStudentModal'),
             placeholder: "Select an option...",
             allowClear: true
         });
 
-        $('#edit_water-comfort').select2({
+        $('#water-comfort').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#editStudentModal'),
+            dropdownParent: $('#addStudentModal .modal-content'),
             placeholder: "Select an option...",
             allowClear: true
         });
 
-        $('#edit_tent-comfort').select2({
+        $('#tent-comfort').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#editStudentModal'),
+            dropdownParent: $('#addStudentModal .modal-content'),
             placeholder: "Select an option...",
             allowClear: true
         });
 
-        $('#edit_gender').select2({
+        $('#gender').select2({
             theme: "bootstrap-5",
-            dropdownParent: $('#editStudentModal'),
+            dropdownParent: $('#addStudentModal'),
             placeholder: "Select an option...",
             allowClear: true
+        });
+    });
+
+    // Re-initialize select2 when the modal is shown so position is calculated while visible
+    $('#addStudentModal').on('shown.bs.modal', function () {
+        // Destroy and re-init to ensure correct positioning
+        ['#trip_pref_1','#trip_pref_2','#trip_pref_3','#assigned-trip','#water-comfort','#tent-comfort','#gender'].forEach(function(sel){
+            if ($(sel).hasClass('select2-hidden-accessible')) {
+                $(sel).select2('destroy');
+            }
+            $(sel).select2({
+                theme: "bootstrap-5",
+                dropdownParent: $('#addStudentModal .modal-content'),
+                placeholder: "Select an option...",
+                allowClear: true
+            });
         });
     });
 
@@ -108,6 +124,22 @@ window.addEventListener('DOMContentLoaded', function() {
        }
    });
 
+    // Handle Add Student button click - clear form for new student
+    $('button[data-bs-target="#addStudentModal"]').not('.edit-student-btn').on('click', function() {
+        // Clear all form fields
+        $('#studentForm')[0].reset();
+        $('#student_db_id').val('');
+        $('#studentForm').attr('action', '/add-student');
+        $('#addStudentModalLabel').text('Add New Student');
+        $('#studentSubmitBtn').text('Save Student');
+
+        // Clear Select2 dropdowns
+        $('#trip_pref_1, #trip_pref_2, #trip_pref_3, #assigned-trip, #water-comfort, #tent-comfort, #gender').val(null).trigger('change');
+
+        // Change visible student_id field name back to student_id for add mode
+        $('#student_id').attr('name', 'student_id');
+    });
+
     // Handle Edit Student button click
     $(document).on('click', '.edit-student-btn', function() {
         const studentId = String($(this).data('student-id')); // Convert to string for JSON key lookup
@@ -120,28 +152,38 @@ window.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        // Populate the edit form with student data
-        $('#edit_student_id').val(studentData.id);
-        $('#edit_student_id_field').val(studentData.student_id);
-        $('#edit_email').val(studentData.email);
-        $('#edit_first_name').val(studentData.first_name);
-        $('#edit_last_name').val(studentData.last_name);
-        $('#edit_dorm').val(studentData.dorm || '');
-        $('#edit_athletic_team').val(studentData.athletic_team || '');
-        $('#edit_hometown').val(studentData.hometown || '');
-        $('#edit_notes').val(studentData.notes || '');
+        // Change form to edit mode
+        $('#studentForm').attr('action', '/edit-student');
+        $('#addStudentModalLabel').text('Edit Student');
+        $('#studentSubmitBtn').text('Save Changes');
+
+        // Set hidden database ID field
+        $('#student_db_id').val(studentData.id);
+
+        // Change visible student_id field name to student_id_field for edit mode
+        $('#student_id').attr('name', 'student_id_field');
+
+        // Populate the form with student data
+        $('#student_id').val(studentData.student_id);
+        $('#email').val(studentData.email);
+        $('#first_name').val(studentData.first_name);
+        $('#last_name').val(studentData.last_name);
+        $('#dorm').val(studentData.dorm || '');
+        $('#athletic_team').val(studentData.athletic_team || '');
+        $('#hometown').val(studentData.hometown || '');
+        $('#notes').val(studentData.notes || '');
 
         // Set checkboxes
-        $('#edit_poc').prop('checked', studentData.poc === true || studentData.poc === 'true');
-        $('#edit_fli_international').prop('checked', studentData.fli_international === true || studentData.fli_international === 'true');
+        $('#poc').prop('checked', studentData.poc === true || studentData.poc === 'true');
+        $('#fli_international').prop('checked', studentData.fli_international === true || studentData.fli_international === 'true');
 
         // Set select dropdowns
-        $('#edit_trip_pref_1').val(studentData.trip_pref_1 || '').trigger('change');
-        $('#edit_trip_pref_2').val(studentData.trip_pref_2 || '').trigger('change');
-        $('#edit_trip_pref_3').val(studentData.trip_pref_3 || '').trigger('change');
-        $('#edit_gender').val(studentData.gender || '').trigger('change');
-        $('#edit_water-comfort').val(studentData.water_comfort || '').trigger('change');
-        $('#edit_tent-comfort').val(studentData.tent_comfort || '').trigger('change');
-        $('#edit_assigned-trip').val(studentData.trip_id ? String(studentData.trip_id) : '').trigger('change');
+        $('#trip_pref_1').val(studentData.trip_pref_1 || '').trigger('change');
+        $('#trip_pref_2').val(studentData.trip_pref_2 || '').trigger('change');
+        $('#trip_pref_3').val(studentData.trip_pref_3 || '').trigger('change');
+        $('#gender').val(studentData.gender || '').trigger('change');
+        $('#water-comfort').val(studentData.water_comfort || '').trigger('change');
+        $('#tent-comfort').val(studentData.tent_comfort || '').trigger('change');
+        $('#assigned-trip').val(studentData.trip_id ? String(studentData.trip_id) : '').trigger('change');
     });
 });
