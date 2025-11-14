@@ -1,5 +1,5 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash
-from models import Student, Trip, db
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
+from models import Student, Trip, db, User
 from flask_login import login_required, current_user
 import csv
 from io import StringIO
@@ -13,6 +13,25 @@ main = Blueprint('main', __name__)
 @admin_required
 def settings():
     return render_template('settings.html',current_user=current_user)
+
+@main.route('/get-users')
+@admin_required
+def get_users():
+    """API endpoint to fetch all users."""
+    try:
+        users = User.query.all()
+        users_data = [
+            {
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user.role
+            }
+            for user in users
+        ]
+        return jsonify({'users': users_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @main.route('/student_view')
 @student_required
@@ -424,6 +443,71 @@ def sort_students_route():
         flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
 
     return redirect(url_for('main.groups'))
+
+@main.route('/update-user-role', methods=['POST'])
+@manager_required
+def update_user_role():
+    """API endpoint to update a user's role."""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        new_role = data.get('role')
+
+        if not email:
+            flash('Missing email', 'danger')
+            return jsonify({'success': False}), 400
+
+        # Validate role
+        valid_roles = ['admin_manager', 'admin', 'student', 'none', None]
+        if new_role not in valid_roles:
+            flash('Invalid role', 'danger')
+            return jsonify({'success': False}), 400
+
+        # Convert string 'none' to None
+        if new_role == 'none':
+            new_role = None
+
+        # Find user
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('User not found', 'danger')
+            return jsonify({'success': False}), 404
+
+        # Prevent self-demotion from admin_manager
+        if user.email == current_user.email and current_user.role == 'admin_manager' and new_role != 'admin_manager':
+            flash('Cannot change your own admin_manager role', 'danger')
+            return jsonify({'success': False}), 403
+
+        # Update role
+        user.role = new_role
+        db.session.commit()
+
+        role_display = new_role if new_role else 'None'
+        flash(f'Successfully updated {user.first_name} {user.last_name}\'s role to {role_display}', 'success')
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating user role: {str(e)}', 'danger')
+        return jsonify({'success': False}), 500
+
+@main.route('/clear-databases', methods=['POST'])
+@manager_required
+def clear_databases():
+    try:
+        # Delete all students and trips
+        num_students = Student.query.delete()
+        num_trips = Trip.query.delete()
+
+        # Delete users with role 'student' or None
+        from models import User
+        num_users = User.query.filter((User.role == 'student') | (User.role == None)).delete(synchronize_session=False)
+
+        db.session.commit()
+        flash(f'🗑️ Cleared databases: {num_students} students, {num_trips} trips, and {num_users} users removed.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'⚠️ Error clearing databases: {str(e)}', 'danger')
+    return redirect(url_for('main.settings'))
 
 def validate_trip(trip):
     """Validate a trip and return validation results."""
