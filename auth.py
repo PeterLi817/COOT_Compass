@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask import request, session
-from models import db, User
+from models import db, User, Student
 from flask_login import login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
 import os
@@ -14,7 +14,12 @@ AUTH_REDIRECT_URI = 'auth.authorize'
 @auth_blueprint.route('/')
 def login_page():
     if current_user.is_authenticated:
-        return redirect(url_for('main.groups'))
+        if current_user.role is None:
+            return redirect(url_for('main.no_access'))
+        elif current_user.role=='student':
+            return redirect(url_for('main.student_view'))
+        else:
+            return redirect(url_for('main.groups'))
     return render_template('login.html')
 
 
@@ -66,9 +71,22 @@ def authorize():
     app_user = get_user(google_user['email'])
     if not app_user:
         app_user = create_new_user(google_user)
+    else:
+        # If user exists but role is None, check if they should be a student
+        if app_user.role is None:
+            student = Student.query.filter_by(email=google_user['email']).first()
+            if student:
+                app_user.role = 'student'
+                student.user_email = google_user['email']
+                db.session.commit()
 
     login_user(app_user)
-    return redirect(url_for('main.groups'))
+    if app_user.role is None:
+        return redirect(url_for('main.no_access'))
+    elif app_user.role=='student':
+        return redirect(url_for('main.student_view'))
+    else:
+        return redirect(url_for('main.groups'))
 
 @auth_blueprint.route('/logout')
 @login_required
@@ -87,12 +105,28 @@ def create_new_user(user):
     """
     This function exists so in the future, when we add roles and stuff
     we will add the roles here.
+
+    If the user's email exists in the Student database, set their role to 'student'
+    and link the user_email in the Student record.
     """
+    # Check if this email exists in the Student database
+    student = Student.query.filter_by(email=user['email']).first()
+
+    # Set role based on whether they're a student
+    role = 'student' if student else None
+
     new_user = User(
         email=user['email'],
         first_name=user['given_name'],
         last_name=user['family_name'],
+        role=role
     )
     db.session.add(new_user)
     db.session.commit()
+
+    # If this user is a student, link the user_email in the Student record
+    if student:
+        student.user_email = user['email']
+        db.session.commit()
+
     return new_user
