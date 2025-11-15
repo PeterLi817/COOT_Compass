@@ -13,8 +13,8 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(120), primary_key=True)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
-    # password_hash = db.Column(db.String(128), nullable=False)
-    role = db.Column(db.String(20))  # admin, student, or none
+    role = db.Column(db.String(20))  # admin, admin_manager, student, or None
+    # Admins can see and edit data, only admin managers can edit admins or clear the database
 
     # One-to-one relationship with Student
     student = db.relationship('Student', backref='user', uselist=False)

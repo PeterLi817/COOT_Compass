@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Your Trip</title>
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet" />
+    <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+</head>
+<body class="bg-light">
+    <div class="container py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <!-- Logo (top-left) -->
+            <div class="d-flex align-items-center">
+                <img src="{{ url_for('static', filename='img/colby_logo.png') }}"
+                     alt="Colby Logo"
+                     style="height: 50px;">
+                <h4 class="ms-3 mb-0 fw-bold text-dark">COOT {{ now.year }}</h4>
+            </div>
+
+            <!-- User info (top-right) -->
+            <div class="d-flex align-items-center">
+                <div class="text-muted me-3">
+                    Logged in as <strong>{{ current_user.first_name }} {{ current_user.last_name }}</strong>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-sign-out-alt me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Trip Card -->
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card shadow border-0 rounded-lg">
+                    <div class="card-body text-center p-5">
+                        <h2 class="fw-bold mb-3">Your Trip</h2>
+                        <p class="lead">TODO</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,33 +1,108 @@
-from flask import Blueprint, render_template, redirect, url_for, request, flash, Response, send_file
-from models import Student, Trip, db
-from flask_login import login_required
+from flask import Blueprint, render_template, redirect, url_for, request, flash, Response, send_file, jsonify
+from models import Student, Trip, db, User
+from flask_login import login_required, current_user
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import csv
 import io
 from io import StringIO
 from sort import sort_students
+import json
+from static.utils.decorators import manager_required, admin_required, student_required
 from datetime import datetime
 
 main = Blueprint('main', __name__)
 
-@main.route('/trips')
+@main.route('/settings')
+@admin_required
+def settings():
+    return render_template('settings.html',current_user=current_user)
+
+@main.route('/get-users')
+@admin_required
+def get_users():
+    """API endpoint to fetch all users."""
+    try:
+        users = User.query.all()
+        users_data = [
+            {
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user.role
+            }
+            for user in users
+        ]
+        return jsonify({'users': users_data})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main.route('/student_view')
+@student_required
+def student_view():
+    return render_template('student_view.html', current_user=current_user, now=datetime.now())
+
+@main.route('/no_access')
 @login_required
+def no_access():
+    return render_template('no_view.html', current_user=current_user, now=datetime.now())
+
+@main.route('/trips')
+@admin_required
 def trips():
     trips = Trip.query.all()
-    return render_template('trips.html', trips=trips)
+
+    # Create a dictionary mapping trip IDs to their data for JSON
+    trips_data = {}
+    for trip in trips:
+        trips_data[str(trip.id)] = {
+            'id': trip.id,
+            'trip_name': trip.trip_name,
+            'trip_type': trip.trip_type,
+            'capacity': trip.capacity,
+            'address': trip.address or '',
+            'water': trip.water if trip.water is not None else False,
+            'tent': trip.tent if trip.tent is not None else False
+        }
+
+    return render_template('trips.html', trips=trips, trips_data_json=json.dumps(trips_data))
 
 @main.route('/first-years')
-@login_required
+@admin_required
 def first_years():
     students = Student.query.all()
     trips = Trip.query.all()
     unique_trip_types_query = db.session.query(Trip.trip_type).distinct().order_by(Trip.trip_type)
     unique_trip_types = [t[0] for t in unique_trip_types_query]
-    return render_template('first-years.html', students=students, trips=trips, unique_trip_types=unique_trip_types)
+
+    # Create a dictionary mapping student IDs to their data for JSON
+    students_data = {}
+    for student in students:
+        students_data[str(student.id)] = {
+            'id': student.id,
+            'student_id': student.student_id,
+            'email': student.email,
+            'first_name': student.first_name,
+            'last_name': student.last_name,
+            'dorm': student.dorm or '',
+            'athletic_team': student.athletic_team or '',
+            'hometown': student.hometown or '',
+            'notes': student.notes or '',
+            'poc': student.poc if student.poc is not None else False,
+            'fli_international': student.fli_international if student.fli_international is not None else False,
+            'trip_pref_1': student.trip_pref_1 or '',
+            'trip_pref_2': student.trip_pref_2 or '',
+            'trip_pref_3': student.trip_pref_3 or '',
+            'gender': student.gender or '',
+            'water_comfort': str(student.water_comfort) if student.water_comfort is not None else '',
+            'tent_comfort': str(student.tent_comfort) if student.tent_comfort is not None else '',
+            'trip_id': student.trip_id
+        }
+
+    return render_template('first-years.html', students=students, trips=trips, unique_trip_types=unique_trip_types, students_data_json=json.dumps(students_data))
 
 @main.route('/groups')
-@login_required
+@admin_required
 def groups():
     trips = Trip.query.all()
     students = Student.query.all()
@@ -39,7 +114,7 @@ def groups():
     return render_template('groups.html', trips=trips, students=students)
 
 @main.route('/add-student', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def add_student():
     if request.method == 'POST':
         student_id = request.form.get('student_id')
@@ -72,8 +147,8 @@ def add_student():
             athletic_team=request.form.get('athletic_team'),
             notes=request.form.get('notes'),
             gender=request.form.get('gender'),
-            water_comfort=request.form.get('water-comfort'),
-            tent_comfort=request.form.get('tent-comfort'),
+            water_comfort=int(request.form.get('water_comfort')) if request.form.get('water_comfort') else None,
+            tent_comfort=int(request.form.get('tent_comfort')) if request.form.get('tent_comfort') else None,
             hometown=request.form.get('hometown'),
             poc=poc,
             fli_international=fli_international,
@@ -92,8 +167,84 @@ def add_student():
 
     return redirect(url_for('main.first_years'))
 
-@main.route('/remove-student', methods=['GET', 'POST'])
+@main.route('/edit-student', methods=['POST'])
 @login_required
+def edit_student():
+    # Get the database primary key (id) from the hidden form field
+    student_db_id = request.form.get('student_db_id')
+
+    if not student_db_id:
+        flash('Error: Student ID is required.', 'danger')
+        return redirect(url_for('main.first_years'))
+
+    # Query by database primary key (id), not by student_id field
+    try:
+        student = Student.query.get(int(student_db_id))
+    except (ValueError, TypeError):
+        student = None
+
+    if not student:
+        flash('Error: Student not found.', 'danger')
+        return redirect(url_for('main.first_years'))
+
+    # Get form data - check for student_id_field first (edit mode), then fall back to student_id (add mode)
+    student_id_field = request.form.get('student_id_field') or request.form.get('student_id')
+    email = request.form.get('email')
+    first_name = request.form.get('first_name')
+    last_name = request.form.get('last_name')
+
+    # Validate required fields
+    if not student_id_field or not email or not first_name or not last_name:
+        flash('Error: Missing required fields.', 'danger')
+        return redirect(url_for('main.first_years'))
+
+    # Check if student_id or email is being changed to a value that already exists (for a different student)
+    if student_id_field != student.student_id:
+        if Student.query.filter(Student.student_id == student_id_field, Student.id != student.id).first():
+            flash('Error: Student ID already exists for another student.', 'danger')
+            return redirect(url_for('main.first_years'))
+
+    if email != student.email:
+        if Student.query.filter(Student.email == email, Student.id != student.id).first():
+            flash('Error: Email already exists for another student.', 'danger')
+            return redirect(url_for('main.first_years'))
+
+
+    # Update student fields
+    student.student_id = student_id_field
+    student.email = email
+    student.first_name = first_name
+    student.last_name = last_name
+    student.trip_pref_1 = request.form.get('trip_pref_1') or None
+    student.trip_pref_2 = request.form.get('trip_pref_2') or None
+    student.trip_pref_3 = request.form.get('trip_pref_3') or None
+    student.dorm = request.form.get('dorm') or None
+    student.athletic_team = request.form.get('athletic_team') or None
+    student.gender = request.form.get('gender') or None
+    student.hometown = request.form.get('hometown') or None
+    water_comfort_val = request.form.get('water_comfort')
+    student.water_comfort = int(water_comfort_val) if water_comfort_val else None
+    tent_comfort_val = request.form.get('tent_comfort')
+    student.tent_comfort = int(tent_comfort_val) if tent_comfort_val else None
+    student.notes = request.form.get('notes') or None
+    student.poc = request.form.get('poc') == 'true'
+    student.fli_international = request.form.get('fli_international') == 'true'
+
+    # Handle trip assignment
+    assigned_trip = request.form.get('assigned-trip')
+    student.trip_id = int(assigned_trip) if assigned_trip else None
+
+    try:
+        db.session.commit()
+        flash('Student updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating student: {str(e)}', 'danger')
+
+    return redirect(url_for('main.first_years'))
+
+@main.route('/remove-student', methods=['GET', 'POST'])
+@admin_required
 def remove_student():
    if request.method == 'POST':
        student_id_to_remove = request.form.get('student_id')
@@ -123,7 +274,7 @@ def remove_student():
    return redirect(url_for('main.first_years'))
 
 @main.route('/add-trip', methods=['GET', 'POST'])
-@login_required
+@admin_required
 def add_trip():
     if request.method == 'POST':
         # Get required data from the form
@@ -178,8 +329,64 @@ def add_trip():
 
     return redirect(url_for('main.trips'))
 
-@main.route('/remove-trip', methods=['GET', 'POST'])
+@main.route('/edit-trip', methods=['POST'])
 @login_required
+def edit_trip():
+    trip_id = request.form.get('trip_id')
+
+    if not trip_id:
+        flash('Error: Trip ID is required.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    # Query by database primary key (id)
+    try:
+        trip = Trip.query.get(int(trip_id))
+    except (ValueError, TypeError):
+        trip = None
+
+    if not trip:
+        flash('Error: Trip not found.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    trip_name = request.form.get('trip_name')
+    trip_type = request.form.get('trip_type')
+    capacity = request.form.get('capacity')
+
+    if not trip_name or not trip_type or not capacity:
+        flash('Error: Missing required fields.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    try:
+        capacity = int(capacity)
+        if capacity < 1:
+            raise ValueError("Capacity must be at least 1")
+    except ValueError:
+        flash('Error: Capacity must be a positive integer.', 'danger')
+        return redirect(url_for('main.trips'))
+
+    if trip_name != trip.trip_name:
+        if Trip.query.filter(Trip.trip_name == trip_name, Trip.id != trip.id).first():
+            flash(f'Error: A trip with the name "{trip_name}" already exists.', 'danger')
+            return redirect(url_for('main.trips'))
+
+    trip.trip_name = trip_name
+    trip.trip_type = trip_type
+    trip.capacity = capacity
+    trip.address = request.form.get('address')
+    trip.water = request.form.get('water') == 'true'
+    trip.tent = request.form.get('tent') == 'true'
+
+    try:
+        db.session.commit()
+        flash('Trip updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating trip: {str(e)}', 'danger')
+
+    return redirect(url_for('main.trips'))
+
+@main.route('/remove-trip', methods=['GET', 'POST'])
+@admin_required
 def remove_trip():
    if request.method == 'POST':
        trip_id_to_remove = request.form.get('trip_id')
@@ -212,7 +419,7 @@ def remove_trip():
 
 
 @main.route('/move-student', methods=['POST'])
-@login_required
+@admin_required
 def move_student():
     student_input = request.form.get('student_name', '').strip()
     new_trip_id = request.form.get('new_trip_id')
@@ -245,7 +452,7 @@ def move_student():
     return redirect(url_for('main.groups'))
 
 @main.route('/swap-students', methods=['POST'])
-@login_required
+@admin_required
 def swap_students():
     s1_input = (request.form.get('student1_name') or "").strip()
     s2_input = (request.form.get('student2_name') or "").strip()
@@ -282,6 +489,7 @@ def swap_students():
     return redirect(url_for('main.groups'))
 
 @main.route('/upload_csv', methods=['POST'])
+@admin_required
 def upload_csv():
     file = request.files.get('csv_file')
     if not file:
@@ -390,7 +598,7 @@ def upload_csv():
     return redirect(url_for('main.first_years'))
 
 @main.route('/sort-students', methods=['POST'])
-@login_required
+@admin_required
 def sort_students_route():
     """Handle the Sort Students button click."""
     try:
@@ -410,6 +618,71 @@ def sort_students_route():
         flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
 
     return redirect(url_for('main.groups'))
+
+@main.route('/update-user-role', methods=['POST'])
+@manager_required
+def update_user_role():
+    """API endpoint to update a user's role."""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        new_role = data.get('role')
+
+        if not email:
+            flash('Missing email', 'danger')
+            return jsonify({'success': False}), 400
+
+        # Validate role
+        valid_roles = ['admin_manager', 'admin', 'student', 'none', None]
+        if new_role not in valid_roles:
+            flash('Invalid role', 'danger')
+            return jsonify({'success': False}), 400
+
+        # Convert string 'none' to None
+        if new_role == 'none':
+            new_role = None
+
+        # Find user
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            flash('User not found', 'danger')
+            return jsonify({'success': False}), 404
+
+        # Prevent self-demotion from admin_manager
+        if user.email == current_user.email and current_user.role == 'admin_manager' and new_role != 'admin_manager':
+            flash('Cannot change your own admin_manager role', 'danger')
+            return jsonify({'success': False}), 403
+
+        # Update role
+        user.role = new_role
+        db.session.commit()
+
+        role_display = new_role if new_role else 'None'
+        flash(f'Successfully updated {user.first_name} {user.last_name}\'s role to {role_display}', 'success')
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating user role: {str(e)}', 'danger')
+        return jsonify({'success': False}), 500
+
+@main.route('/clear-databases', methods=['POST'])
+@manager_required
+def clear_databases():
+    try:
+        # Delete all students and trips
+        num_students = Student.query.delete()
+        num_trips = Trip.query.delete()
+
+        # Delete users with role 'student' or None
+        from models import User
+        num_users = User.query.filter((User.role == 'student') | (User.role == None)).delete(synchronize_session=False)
+
+        db.session.commit()
+        flash(f'🗑️ Cleared databases: {num_students} students, {num_trips} trips, and {num_users} users removed.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'⚠️ Error clearing databases: {str(e)}', 'danger')
+    return redirect(url_for('main.settings'))
 
 def validate_trip(trip):
     """Validate a trip and return validation results."""
