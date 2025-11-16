@@ -489,80 +489,80 @@ def swap_students():
 
     return redirect(url_for('main.groups'))
 
-# @main.route('/upload_csv', methods=['POST'])
-# def upload_csv():
-#     file = request.files.get('csv_file')
-#     if not file:
-#         flash('⚠️ No file selected.', 'danger')
-#         return redirect(url_for('main.groups'))
+@main.route('/upload_csv', methods=['POST'])
+def upload_csv():
+    file = request.files.get('csv_file')
+    if not file:
+        flash('⚠️ No file selected.', 'danger')
+        return redirect(url_for('main.groups'))
 
-#     try:
-#         stream = StringIO(file.stream.read().decode("utf-8"))
-#         csv_input = csv.DictReader(stream)
+    try:
+        stream = StringIO(file.stream.read().decode("utf-8"))
+        csv_input = csv.DictReader(stream)
 
-#         for row in csv_input:
-#             student_id = (row.get('student_id') or '').strip()
-#             first_name = (row.get('first_name') or '').strip()
-#             last_name = (row.get('last_name') or '').strip()
-#             gender = (row.get('gender') or '').strip()
-#             athletic_team = (row.get('athletic_team') or '').strip()
-#             hometown = (row.get('hometown') or '').strip()
-#             dorm = (row.get('dorm') or '').strip()
-#             water_comfort = (row.get('water_comfort') or '').strip()
-#             tent_comfort = (row.get('tent_comfort') or '').strip()
-#             trip_name = (row.get('trip_name') or '').strip()
-#             trip_type = (row.get('trip_type') or '').strip()
-#             email = (row.get('email') or '').strip()
+        for row in csv_input:
+            student_id = (row.get('student_id') or '').strip()
+            first_name = (row.get('first_name') or '').strip()
+            last_name = (row.get('last_name') or '').strip()
+            gender = (row.get('gender') or '').strip()
+            athletic_team = (row.get('athletic_team') or '').strip()
+            hometown = (row.get('hometown') or '').strip()
+            dorm = (row.get('dorm') or '').strip()
+            water_comfort = (row.get('water_comfort') or '').strip()
+            tent_comfort = (row.get('tent_comfort') or '').strip()
+            trip_name = (row.get('trip_name') or '').strip()
+            trip_type = (row.get('trip_type') or '').strip()
+            email = (row.get('email') or '').strip()
 
-#             trip = Trip.query.filter_by(trip_name=trip_name).first()
-#             if not trip:
-#                 trip = Trip(
-#                     trip_name=trip_name,
-#                     trip_type=trip_type,
-#                     capacity=10,
-#                     address=None,
-#                     water=False,
-#                     tent=False
-#                 )
-#                 db.session.add(trip)
-#                 db.session.flush()
+            trip = Trip.query.filter_by(trip_name=trip_name).first()
+            if not trip:
+                trip = Trip(
+                    trip_name=trip_name,
+                    trip_type=trip_type,
+                    capacity=10,
+                    address=None,
+                    water=False,
+                    tent=False
+                )
+                db.session.add(trip)
+                db.session.flush()
 
-#             student = Student.query.filter_by(student_id=student_id).first()
-#             if not student:
-#                 student = Student(
-#                     student_id=student_id,
-#                     first_name=first_name,
-#                     last_name=last_name,
-#                     gender=gender,
-#                     athletic_team=athletic_team,
-#                     hometown=hometown,
-#                     dorm=dorm,
-#                     water_comfort=water_comfort,
-#                     tent_comfort=tent_comfort,
-#                     email=email,
-#                     trip_id=trip.id
-#                 )
-#                 db.session.add(student)
-#             else:
-#                 student.first_name = first_name
-#                 student.last_name = last_name
-#                 student.gender = gender
-#                 student.athletic_team = athletic_team
-#                 student.hometown = hometown
-#                 student.dorm = dorm
-#                 student.water_comfort = water_comfort
-#                 student.tent_comfort = tent_comfort
-#                 student.email = email
-#                 student.trip_id = trip.id
+            student = Student.query.filter_by(student_id=student_id).first()
+            if not student:
+                student = Student(
+                    student_id=student_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    gender=gender,
+                    athletic_team=athletic_team,
+                    hometown=hometown,
+                    dorm=dorm,
+                    water_comfort=water_comfort,
+                    tent_comfort=tent_comfort,
+                    email=email,
+                    trip_id=trip.id
+                )
+                db.session.add(student)
+            else:
+                student.first_name = first_name
+                student.last_name = last_name
+                student.gender = gender
+                student.athletic_team = athletic_team
+                student.hometown = hometown
+                student.dorm = dorm
+                student.water_comfort = water_comfort
+                student.tent_comfort = tent_comfort
+                student.email = email
+                student.trip_id = trip.id
 
-#         db.session.commit()
-#         flash("CSV uploaded successfully!", "success")
+        db.session.commit()
+        flash("CSV uploaded successfully!", "success")
 
-#     except Exception as e:
-#         db.session.rollback()
-#         flash(f"⚠️ Error processing CSV: {str(e)}", "danger")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"⚠️ Error processing CSV: {str(e)}", "danger")
 
-#     return redirect(url_for('main.groups'))
+    return redirect(url_for('main.groups'))
 
 
 @main.route('/process_matched_csv', methods=['POST'])

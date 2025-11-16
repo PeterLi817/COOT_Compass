@@ -1,7 +1,0 @@
-student_id,first_name,last_name,email,gender,athletic_team,dorm,hometown,water_comfort,tent_comfort,trip_name,trip_type
-S001,John,Smith,john.smith@colby.edu,Male,Soccer,Dana Hall,Portland ME,4,5,Trip 1,backpacking
-S002,Jane,Doe,jane.doe@colby.edu,Female,Swimming,West Hall,Boston MA,5,4,Trip 2,canoeing
-S003,Mike,Johnson,mike.johnson@colby.edu,Male,None,East Hall,New York NY,3,3,Trip 1,backpacking
-S004,Sarah,Williams,sarah.williams@colby.edu,Female,Tennis,JOPO,Los Angeles CA,4,4,Trip 3,basecamp
-S005,David,Brown,david.brown@colby.edu,Male,Basketball,Dana Hall,Chicago IL,5,5,Trip 2,canoeing
-
