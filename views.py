@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, Response, send_file, jsonify
+import os
 from models import Student, Trip, db, User
 from flask_login import login_required, current_user
 from reportlab.lib.pagesizes import letter
@@ -488,201 +489,259 @@ def swap_students():
 
     return redirect(url_for('main.groups'))
 
-@main.route('/upload_csv', methods=['POST'])
-@admin_required
-def upload_csv():
-    file = request.files.get('csv_file')
-    if not file:
-        flash('⚠️ No file selected.', 'danger')
-        return redirect(url_for('main.first_years'))
+# @main.route('/upload_csv', methods=['POST'])
+# def upload_csv():
+#     file = request.files.get('csv_file')
+#     if not file:
+#         flash('⚠️ No file selected.', 'danger')
+#         return redirect(url_for('main.groups'))
 
+#     try:
+#         stream = StringIO(file.stream.read().decode("utf-8"))
+#         csv_input = csv.DictReader(stream)
+
+#         for row in csv_input:
+#             student_id = (row.get('student_id') or '').strip()
+#             first_name = (row.get('first_name') or '').strip()
+#             last_name = (row.get('last_name') or '').strip()
+#             gender = (row.get('gender') or '').strip()
+#             athletic_team = (row.get('athletic_team') or '').strip()
+#             hometown = (row.get('hometown') or '').strip()
+#             dorm = (row.get('dorm') or '').strip()
+#             water_comfort = (row.get('water_comfort') or '').strip()
+#             tent_comfort = (row.get('tent_comfort') or '').strip()
+#             trip_name = (row.get('trip_name') or '').strip()
+#             trip_type = (row.get('trip_type') or '').strip()
+#             email = (row.get('email') or '').strip()
+
+#             trip = Trip.query.filter_by(trip_name=trip_name).first()
+#             if not trip:
+#                 trip = Trip(
+#                     trip_name=trip_name,
+#                     trip_type=trip_type,
+#                     capacity=10,
+#                     address=None,
+#                     water=False,
+#                     tent=False
+#                 )
+#                 db.session.add(trip)
+#                 db.session.flush()
+
+#             student = Student.query.filter_by(student_id=student_id).first()
+#             if not student:
+#                 student = Student(
+#                     student_id=student_id,
+#                     first_name=first_name,
+#                     last_name=last_name,
+#                     gender=gender,
+#                     athletic_team=athletic_team,
+#                     hometown=hometown,
+#                     dorm=dorm,
+#                     water_comfort=water_comfort,
+#                     tent_comfort=tent_comfort,
+#                     email=email,
+#                     trip_id=trip.id
+#                 )
+#                 db.session.add(student)
+#             else:
+#                 student.first_name = first_name
+#                 student.last_name = last_name
+#                 student.gender = gender
+#                 student.athletic_team = athletic_team
+#                 student.hometown = hometown
+#                 student.dorm = dorm
+#                 student.water_comfort = water_comfort
+#                 student.tent_comfort = tent_comfort
+#                 student.email = email
+#                 student.trip_id = trip.id
+
+#         db.session.commit()
+#         flash("CSV uploaded successfully!", "success")
+
+#     except Exception as e:
+#         db.session.rollback()
+#         flash(f"⚠️ Error processing CSV: {str(e)}", "danger")
+
+#     return redirect(url_for('main.groups'))
+
+
+@main.route('/process_matched_csv', methods=['POST'])
+@login_required
+def process_matched_csv():
     try:
-        stream = StringIO(file.stream.read().decode("utf-8"))
+        file = request.files.get("csv_file")
+        import_mode = request.form.get("importMode")  # add / update
+
+        if not file:
+            return jsonify({"success": False, "message": "No CSV uploaded."}), 400
+
+        # Read CSV
+        stream = io.StringIO(file.stream.read().decode("utf-8"))
         csv_input = csv.DictReader(stream)
+        rows = list(csv_input)
 
-        for row in csv_input:
-            def null_if_empty(val):
-                v = (val or '').strip()
-                return v if v else None
+        if not rows:
+            return jsonify({"success": False, "message": "CSV file is empty."}), 400
 
-            student_id = null_if_empty(row.get('student_id'))
-            first_name = null_if_empty(row.get('first_name'))
-            last_name = null_if_empty(row.get('last_name'))
-            gender = null_if_empty(row.get('gender'))
-            athletic_team = null_if_empty(row.get('athletic_team'))
-            hometown = null_if_empty(row.get('hometown'))
-            dorm = null_if_empty(row.get('dorm'))
-            water_comfort = null_if_empty(row.get('water_comfort'))
-            tent_comfort = null_if_empty(row.get('tent_comfort'))
-            trip_name = null_if_empty(row.get('trip_name'))
-            trip_type = null_if_empty(row.get('trip_type'))
-            email = null_if_empty(row.get('email'))
-            trip_pref_1 = null_if_empty(row.get('trip_pref_1'))
-            trip_pref_2 = null_if_empty(row.get('trip_pref_2'))
-            trip_pref_3 = null_if_empty(row.get('trip_pref_3'))
-            notes = null_if_empty(row.get('notes'))
+        # Build column mapping
+        column_map = {}
+        for csv_col in request.form:
+            if csv_col in ["csv_file", "importMode"]:
+                continue
+            db_field = request.form.get(csv_col)
+            if db_field:  # Only add if a database field was selected
+                column_map[csv_col] = db_field
 
-            # Validate required fields for student
-            if not student_id or not first_name or not last_name or not email:
-                continue  # Skip this row if required student fields are missing
+        if not column_map:
+            return jsonify({"success": False, "message": "No column mappings found. Please match CSV columns to database fields."}), 400
 
-            # Handle boolean fields
-            poc_value = (row.get('poc') or '').strip().lower()
-            poc = poc_value in ['true', '1', 'yes']
-            fli_international_value = (row.get('fli_international') or '').strip().lower()
-            fli_international = fli_international_value in ['true', '1', 'yes']
+        # Valid Student model fields (excluding relationships and ID)
+        valid_student_fields = {
+            'student_id', 'first_name', 'last_name', 'email', 'trip_id',
+            'trip_pref_1', 'trip_pref_2', 'trip_pref_3', 'dorm',
+            'athletic_team', 'gender', 'notes', 'water_comfort',
+            'tent_comfort', 'hometown', 'poc', 'fli_international'
+        }
 
-            # Handle trip assignment
-            trip = None
-            if trip_name and trip_type:
-                trip = Trip.query.filter_by(trip_name=trip_name).first()
-                if not trip:
-                    trip = Trip(
-                        trip_name=trip_name,
-                        trip_type=trip_type,
-                        capacity=10,
-                        address=None,
-                        water=False,
-                        tent=False
-                    )
-                    db.session.add(trip)
-                    db.session.flush()
+        # Process each row
+        added_count = 0
+        updated_count = 0
+        skipped_count = 0
+        errors = []
 
-            student = Student.query.filter_by(student_id=student_id).first()
-            if not student:
-                student = Student(
-                    student_id=student_id,
-                    first_name=first_name,
-                    last_name=last_name,
-                    gender=gender,
-                    athletic_team=athletic_team,
-                    hometown=hometown,
-                    dorm=dorm,
-                    water_comfort=water_comfort,
-                    tent_comfort=tent_comfort,
-                    email=email,
-                    trip_pref_1=trip_pref_1,
-                    trip_pref_2=trip_pref_2,
-                    trip_pref_3=trip_pref_3,
-                    notes=notes,
-                    poc=poc,
-                    fli_international=fli_international,
-                    trip_id=trip.id if trip else None
-                )
-                db.session.add(student)
-            else:
-                student.first_name = first_name
-                student.last_name = last_name
-                student.gender = gender
-                student.athletic_team = athletic_team
-                student.hometown = hometown
-                student.dorm = dorm
-                student.water_comfort = water_comfort
-                student.tent_comfort = tent_comfort
-                student.email = email
-                student.trip_pref_1 = trip_pref_1
-                student.trip_pref_2 = trip_pref_2
-                student.trip_pref_3 = trip_pref_3
-                student.notes = notes
-                student.poc = poc
-                student.fli_international = fli_international
-                student.trip_id = trip.id if trip else None
+        for idx, row in enumerate(rows, start=2):  # Start at 2 because row 1 is header
+            try:
+                mapped = {}
+                trip_name = None
+                trip_type = None
 
-        db.session.commit()
-        flash("CSV uploaded successfully!", "success")
+                for csv_col, db_field in column_map.items():
+                    value = row.get(csv_col, "").strip()
+                    
+                    # Handle trip_name and trip_type separately
+                    if db_field == "trip_name":
+                        trip_name = value
+                        continue
+                    elif db_field == "trip_type":
+                        trip_type = value
+                        continue
+                    # Only include valid Student fields
+                    elif db_field in valid_student_fields:
+                        # Convert integer fields
+                        if db_field in ['water_comfort', 'tent_comfort']:
+                            try:
+                                mapped[db_field] = int(value) if value else None
+                            except ValueError:
+                                mapped[db_field] = None
+                        # Convert boolean fields
+                        elif db_field in ['poc', 'fli_international']:
+                            mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y'] if value else None
+                        else:
+                            mapped[db_field] = value if value else None
 
+                student_id = mapped.get("student_id")
+                if not student_id:
+                    errors.append(f"Row {idx}: Missing student_id")
+                    skipped_count += 1
+                    continue
+
+                # Handle trip assignment if trip_name/trip_type provided
+                if trip_name:
+                    trip = Trip.query.filter_by(trip_name=trip_name).first()
+                    if not trip and trip_type:
+                        # Create new trip if it doesn't exist
+                        trip = Trip(
+                            trip_name=trip_name,
+                            trip_type=trip_type,
+                            capacity=10,  # Default capacity
+                            water=False,
+                            tent=False
+                        )
+                        db.session.add(trip)
+                        db.session.flush()  # Get the trip ID
+                    
+                    if trip:
+                        mapped['trip_id'] = trip.id
+
+                existing = Student.query.filter_by(student_id=student_id).first()
+
+                if import_mode == "update" and existing:
+                    # Update existing student
+                    for key, val in mapped.items():
+                        if key in valid_student_fields:
+                            setattr(existing, key, val)
+                    updated_count += 1
+                elif not existing:
+                    # Add new student - ensure required fields are present
+                    missing_fields = []
+                    if not mapped.get('first_name'):
+                        missing_fields.append('first_name')
+                    if not mapped.get('last_name'):
+                        missing_fields.append('last_name')
+                    if not mapped.get('email'):
+                        missing_fields.append('email')
+                    
+                    if missing_fields:
+                        errors.append(f"Row {idx} (ID: {student_id}): Missing required fields: {', '.join(missing_fields)}")
+                        skipped_count += 1
+                        continue
+                    
+                    try:
+                        new_student = Student(**mapped)
+                        db.session.add(new_student)
+                        added_count += 1
+                    except Exception as e:
+                        errors.append(f"Row {idx} (ID: {student_id}): {str(e)}")
+                        skipped_count += 1
+                        continue
+                else:
+                    # Student exists but we're in "add" mode, skip
+                    errors.append(f"Row {idx} (ID: {student_id}): Student already exists (use 'Update Existing Students' mode)")
+                    skipped_count += 1
+                    continue
+            except Exception as e:
+                errors.append(f"Row {idx}: Error processing row - {str(e)}")
+                skipped_count += 1
+                continue
+
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            error_msg = f"Database error during commit: {str(e)}"
+            print(error_msg)
+            import traceback
+            traceback.print_exc()
+            return jsonify({"success": False, "message": error_msg, "errors": errors[:10]}), 500
+        
+        message = f"CSV imported successfully! Added: {added_count}, Updated: {updated_count}"
+        if skipped_count > 0:
+            message += f", Skipped: {skipped_count}"
+            if errors:
+                # Include first few errors in the message
+                error_summary = "; ".join(errors[:3])
+                if len(errors) > 3:
+                    error_summary += f" (and {len(errors) - 3} more)"
+                message += f". Issues: {error_summary}"
+        
+        flash(message, "success" if added_count > 0 or updated_count > 0 else "warning")
+        return jsonify({
+            "success": True, 
+            "message": message,
+            "added": added_count,
+            "updated": updated_count,
+            "skipped": skipped_count,
+            "errors": errors[:10]  # Return first 10 errors for debugging
+        }), 200
+        
     except Exception as e:
         db.session.rollback()
-        flash(f"⚠️ Error processing CSV: {str(e)}", "danger")
+        error_msg = f"Error processing CSV: {str(e)}"
+        print(error_msg)  # For server logs
+        import traceback
+        traceback.print_exc()  # Print full traceback for debugging
+        return jsonify({"success": False, "message": error_msg}), 500
 
-    return redirect(url_for('main.first_years'))
-
-@main.route('/sort-students', methods=['POST'])
-@admin_required
-def sort_students_route():
-    """Handle the Sort Students button click."""
-    try:
-        # Run the intelligent sorting algorithm
-        stats = sort_students()
-
-        # Commit all changes to database
-        db.session.commit()
-
-        # Flash success message with statistics - will show on Groups page
-        flash(f'🎯 Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
-              f'{stats["first_choice_rate"]:.1f}% got first choice, '
-              f'{stats["assignment_rate"]:.1f}% total placement rate.', 'success')
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
-
-    return redirect(url_for('main.groups'))
-
-@main.route('/update-user-role', methods=['POST'])
-@manager_required
-def update_user_role():
-    """API endpoint to update a user's role."""
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        new_role = data.get('role')
-
-        if not email:
-            flash('Missing email', 'danger')
-            return jsonify({'success': False}), 400
-
-        # Validate role
-        valid_roles = ['admin_manager', 'admin', 'student', 'none', None]
-        if new_role not in valid_roles:
-            flash('Invalid role', 'danger')
-            return jsonify({'success': False}), 400
-
-        # Convert string 'none' to None
-        if new_role == 'none':
-            new_role = None
-
-        # Find user
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            flash('User not found', 'danger')
-            return jsonify({'success': False}), 404
-
-        # Prevent self-demotion from admin_manager
-        if user.email == current_user.email and current_user.role == 'admin_manager' and new_role != 'admin_manager':
-            flash('Cannot change your own admin_manager role', 'danger')
-            return jsonify({'success': False}), 403
-
-        # Update role
-        user.role = new_role
-        db.session.commit()
-
-        role_display = new_role if new_role else 'None'
-        flash(f'Successfully updated {user.first_name} {user.last_name}\'s role to {role_display}', 'success')
-        return jsonify({'success': True})
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating user role: {str(e)}', 'danger')
-        return jsonify({'success': False}), 500
-
-@main.route('/clear-databases', methods=['POST'])
-@manager_required
-def clear_databases():
-    try:
-        # Delete all students and trips
-        num_students = Student.query.delete()
-        num_trips = Trip.query.delete()
-
-        # Delete users with role 'student' or None
-        from models import User
-        num_users = User.query.filter((User.role == 'student') | (User.role == None)).delete(synchronize_session=False)
-
-        db.session.commit()
-        flash(f'🗑️ Cleared databases: {num_students} students, {num_trips} trips, and {num_users} users removed.', 'success')
-    except Exception as e:
-        db.session.rollback()
-        flash(f'⚠️ Error clearing databases: {str(e)}', 'danger')
-    return redirect(url_for('main.settings'))
 
 def validate_trip(trip):
     """Validate a trip and return validation results."""
@@ -869,3 +928,48 @@ def export_pdf():
 
     except Exception as e:
         return f"Error generating PDF: {str(e)}", 500
+
+
+@main.route('/download_sample_csv')
+@login_required
+def download_sample_csv():
+    """Download a sample CSV file for testing uploads."""
+    sample_csv_path = os.path.join(os.path.dirname(__file__), 'sample_students.csv')
+    
+    if os.path.exists(sample_csv_path):
+        return send_file(
+            sample_csv_path,
+            as_attachment=True,
+            download_name="sample_students.csv",
+            mimetype="text/csv"
+        )
+    else:
+        # Generate sample CSV on the fly if file doesn't exist
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'student_id', 'first_name', 'last_name', 'email', 'gender',
+            'athletic_team', 'dorm', 'hometown', 'water_comfort', 'tent_comfort',
+            'trip_name', 'trip_type'
+        ])
+        
+        # Write sample data
+        sample_data = [
+            ['S001', 'John', 'Smith', 'john.smith@colby.edu', 'Male', 'Soccer', 'Dana Hall', 'Portland ME', '4', '5', 'Trip 1', 'backpacking'],
+            ['S002', 'Jane', 'Doe', 'jane.doe@colby.edu', 'Female', 'Swimming', 'West Hall', 'Boston MA', '5', '4', 'Trip 2', 'canoeing'],
+            ['S003', 'Mike', 'Johnson', 'mike.johnson@colby.edu', 'Male', 'None', 'East Hall', 'New York NY', '3', '3', 'Trip 1', 'backpacking'],
+            ['S004', 'Sarah', 'Williams', 'sarah.williams@colby.edu', 'Female', 'Tennis', 'JOPO', 'Los Angeles CA', '4', '4', 'Trip 3', 'basecamp'],
+            ['S005', 'David', 'Brown', 'david.brown@colby.edu', 'Male', 'Basketball', 'Dana Hall', 'Chicago IL', '5', '5', 'Trip 2', 'canoeing']
+        ]
+        
+        for row in sample_data:
+            writer.writerow(row)
+        
+        output.seek(0)
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={"Content-Disposition": "attachment; filename=sample_students.csv"}
+        )

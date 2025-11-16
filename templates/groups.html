@@ -532,6 +532,48 @@
         </div>
 
 
+        <!-- Upload CSV Modal -->
+        <div class="modal fade" id="uploadCSVModal" tabindex="-1" aria-labelledby="uploadCSVModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#003366;color:white;">
+                        <h5 class="modal-title" id="uploadCSVModalLabel">Upload CSV File</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="csvForm" enctype="multipart/form-data">
+                        <div class="modal-body">
+                            <p class="text-center text-muted mb-3">Upload a CSV file and match the columns.</p>
+                    
+                            <div class="mb-3">
+                                <label for="csvFile" class="form-label">Choose CSV File</label>
+                                <input class="form-control" type="file" id="csvFile" name="csv_file" accept=".csv" required>
+                            </div>
+                            
+                            <div id="matchArea" style="display:none;">
+                                <hr>
+                                <h6>Match CSV Columns</h6>
+                    
+                                <div id="columnsContainer"></div>
+                    
+                                <hr>
+                                <label class="form-label fw-bold">Action</label>
+                                <select class="form-select" id="importMode">
+                                    <option value="add">Add New Students</option>
+                                    <option value="update">Update Existing Students</option>
+                                </select>
+                            </div>
+                    
+                        </div>
+                    
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" id="uploadBtn" class="btn text-white" style="background-color:#003366;">Upload</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Confirm Sort Students Modal -->
         <div class="modal fade" id="confirmSortStudentsModal" tabindex="-1" aria-labelledby="confirmSortStudentsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -562,6 +604,201 @@
         <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script src="{{ url_for('static', filename='js/datatables-simple-demo.js') }}"></script>
         <script src="{{ url_for('static', filename='js/groups.js') }}"></script>
+        <script>
+            window.addEventListener('DOMContentLoaded', event => {
+                const tables = document.querySelectorAll('.datatables-table');
+                tables.forEach(table => new simpleDatatables.DataTable(table));
+            });
+        </script>
+        <script>
+            window.addEventListener('DOMContentLoaded', () => {
+                // Collect all student names from tables
+                const studentNames = [];
+                document.querySelectorAll('.datatables-table tbody tr').forEach(row => {
+                    const first = row.cells[1]?.textContent.trim();
+                    const last = row.cells[2]?.textContent.trim();
+                    if (first && last) studentNames.push(`${first} ${last}`);
+                });
+                const uniqueNames = [...new Set(studentNames)];
+            
+                // Helper: attach autocomplete dropdown to an input element
+                function attachAutocomplete(inputEl) {
+                    if (!inputEl) return;
+            
+                    const dataList = document.createElement('datalist');
+                    const listId = (inputEl.name || inputEl.id) + '-list';
+                    dataList.id = listId;
+            
+                    uniqueNames.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        dataList.appendChild(option);
+                    });
+            
+                    document.body.appendChild(dataList);
+                    inputEl.setAttribute('list', dataList.id);
+                }
+            
+                // Apply to Move + Swap inputs
+                attachAutocomplete(document.getElementById('student_name')); // Move
+                attachAutocomplete(document.querySelector('[name="student1_name"]')); // Swap 1
+                attachAutocomplete(document.querySelector('[name="student2_name"]')); // Swap 2
+            });
+            </script>
+        <script>
+            window.addEventListener('DOMContentLoaded', function() {
+                // CSV file selection handler
+                document.getElementById("csvFile").addEventListener("change", function () {
+                    const file = this.files[0];
+                    if (!file) return;
+                
+                    const reader = new FileReader();
+                    reader.onload = function (event) {
+                        const text = event.target.result;
+                        const rows = text.split("\n");
+                        const headers = rows[0].split(",");
+                
+                        document.getElementById("matchArea").style.display = "block";
+                
+                        const dbFields = [
+                            'student_id','first_name','last_name','email',
+                            'gender','athletic_team','hometown','dorm',
+                            'water_comfort','tent_comfort','trip_name','trip_type'
+                        ];
+                
+                        const container = document.getElementById("columnsContainer");
+                        container.innerHTML = "";
+                
+                        headers.forEach(h => {
+                            const div = document.createElement("div");
+                            div.classList.add("mb-2");
+                            
+                            const csvHeader = h.trim();
+                            // Try to auto-match CSV column name to database field
+                            let defaultMatch = "";
+                            const csvLower = csvHeader.toLowerCase().replace(/[_\s-]/g, "");
+                            
+                            for (const dbField of dbFields) {
+                                const dbLower = dbField.toLowerCase().replace(/[_\s-]/g, "");
+                                if (csvLower === dbLower || csvLower.includes(dbLower) || dbLower.includes(csvLower)) {
+                                    defaultMatch = dbField;
+                                    break;
+                                }
+                            }
+                            
+                            // Special cases for common variations
+                            if (!defaultMatch) {
+                                if (csvLower.includes("id") && csvLower.includes("student")) defaultMatch = "student_id";
+                                else if (csvLower.includes("first") && csvLower.includes("name")) defaultMatch = "first_name";
+                                else if (csvLower.includes("last") && csvLower.includes("name")) defaultMatch = "last_name";
+                                else if (csvLower.includes("email")) defaultMatch = "email";
+                                else if (csvLower.includes("trip") && csvLower.includes("name")) defaultMatch = "trip_name";
+                                else if (csvLower.includes("trip") && csvLower.includes("type")) defaultMatch = "trip_type";
+                            }
+                
+                            div.innerHTML = `
+                                <label><b>${csvHeader}</b></label>
+                                <select class="form-select matchSelect" data-csv="${csvHeader}">
+                                    <option value="">-- Skip this column --</option>
+                                    ${dbFields.map(f => `<option value="${f}" ${f === defaultMatch ? 'selected' : ''}>${f}</option>`).join("")}
+                                </select>
+                            `;
+                
+                            container.appendChild(div);
+                        });
+                    }
+                
+                    reader.readAsText(file);
+                });
+                
+                // Upload button handler
+                const uploadBtn = document.getElementById("uploadBtn");
+                if (uploadBtn) {
+                    uploadBtn.addEventListener("click", function (e) {
+                        e.preventDefault(); // Prevent any default behavior
+                        console.log("UPLOAD CLICKED");
+                    
+                        // Get the file input
+                        const fileInput = document.getElementById("csvFile");
+                        if (!fileInput.files || !fileInput.files[0]) {
+                            alert("Please select a CSV file first.");
+                            return;
+                        }
+
+                        // Check if column matching is done
+                        const matchSelects = document.querySelectorAll(".matchSelect");
+                        if (matchSelects.length === 0) {
+                            alert("Please select a CSV file to see column matching options.");
+                            return;
+                        }
+                    
+                        const url = "{{ url_for('main.process_matched_csv') }}"; // Flask renders this
+                    
+                        const formData = new FormData();
+                        formData.append("importMode", document.getElementById("importMode").value);
+                        formData.append("csv_file", fileInput.files[0]);
+                    
+                        matchSelects.forEach(sel => {
+                            formData.append(sel.dataset.csv, sel.value);
+                        });
+                    
+                        // Disable button during upload
+                        uploadBtn.disabled = true;
+                        uploadBtn.textContent = "Uploading...";
+                    
+                        fetch(url, {
+                            method: "POST",
+                            body: formData
+                        })
+                        .then(res => res.json().catch(() => ({ success: false, message: "Failed to parse response" })))
+                        .then(data => {
+                            if (data.success) {
+                                // Log detailed results
+                                console.log("Upload Results:", {
+                                    added: data.added,
+                                    updated: data.updated,
+                                    skipped: data.skipped,
+                                    errors: data.errors
+                                });
+                                
+                                // Show detailed message if there are errors
+                                if (data.errors && data.errors.length > 0) {
+                                    let errorMsg = "Upload completed with issues:\n\n";
+                                    errorMsg += `Added: ${data.added}, Updated: ${data.updated}, Skipped: ${data.skipped}\n\n`;
+                                    errorMsg += "Errors:\n" + data.errors.slice(0, 5).join("\n");
+                                    if (data.errors.length > 5) {
+                                        errorMsg += `\n... and ${data.errors.length - 5} more (check console)`;
+                                    }
+                                    alert(errorMsg);
+                                }
+                                
+                                // Redirect to reload the page and show flash message
+                                window.location.href = "{{ url_for('main.groups') }}";
+                            } else {
+                                // Show error message with details
+                                let errorMsg = "Upload failed: " + (data.message || "Unknown error");
+                                if (data.errors && data.errors.length > 0) {
+                                    errorMsg += "\n\nErrors:\n" + data.errors.slice(0, 5).join("\n");
+                                }
+                                alert(errorMsg);
+                                uploadBtn.disabled = false;
+                                uploadBtn.textContent = "Upload";
+                            }
+                        })
+                        .catch(err => {
+                            console.error("UPLOAD ERROR:", err);
+                            alert("An error occurred during upload: " + err.message);
+                            uploadBtn.disabled = false;
+                            uploadBtn.textContent = "Upload";
+                        });
+                    });
+                }
+            });
+            </script>
+            
+            
+            
+    
 
     </body>
 </html>
