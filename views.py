@@ -803,6 +803,101 @@ def export_pdf():
     except Exception as e:
         return f"Error generating PDF: {str(e)}", 500
 
+@main.route('/process_matched_trips_csv', methods=['POST'])
+@login_required
+def process_matched_trips_csv():
+    try:
+        file = request.files.get("csv_file")
+        import_mode = request.form.get("importMode")
+
+        if not file:
+            return jsonify({"success": False, "message": "No CSV uploaded."}), 400
+
+        stream = io.StringIO(file.stream.read().decode("utf-8"))
+        csv_input = csv.DictReader(stream)
+        rows = list(csv_input)
+
+        if not rows:
+            return jsonify({"success": False, "message": "CSV is empty."}), 400
+
+        column_map = {
+            csv_col: request.form.get(csv_col)
+            for csv_col in request.form
+            if csv_col not in ["csv_file", "importMode"] and request.form.get(csv_col)
+        }
+
+        valid_fields = {
+            'trip_name', 'trip_type', 'capacity', 'address', 'water', 'tent'
+        }
+
+        added, updated, skipped = 0, 0, 0
+        errors = []
+
+        for idx, row in enumerate(rows, start=2):
+            try:
+                mapped = {}
+
+                for csv_col, db_field in column_map.items():
+                    value = (row.get(csv_col) or "").strip()
+
+                    if db_field in valid_fields:
+                        if db_field in ['water', 'tent']:
+                            # Handle boolean fields
+                            mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
+                        elif db_field == 'capacity':
+                            # Handle integer field
+                            mapped[db_field] = int(value) if value and value.isdigit() else None
+                        else:
+                            mapped[db_field] = value if value else None
+
+                trip_name = mapped.get("trip_name")
+                if not trip_name:
+                    errors.append(f"Row {idx}: Missing trip_name")
+                    skipped += 1
+                    continue
+
+                existing = Trip.query.filter_by(trip_name=trip_name).first()
+
+                if import_mode == "update" and existing:
+                    for key, val in mapped.items():
+                        setattr(existing, key, val)
+                    updated += 1
+
+                elif not existing:
+                    # Ensure required fields are present
+                    if not mapped.get('trip_type'):
+                        errors.append(f"Row {idx}: Missing trip_type (required)")
+                        skipped += 1
+                        continue
+                    if not mapped.get('capacity'):
+                        mapped['capacity'] = 10  # Default capacity
+                    
+                    new_trip = Trip(**mapped)
+                    db.session.add(new_trip)
+                    added += 1
+
+                else:
+                    skipped += 1
+
+            except Exception as e:
+                errors.append(f"Row {idx}: {str(e)}")
+                skipped += 1
+                continue
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "added": added,
+            "updated": updated,
+            "skipped": skipped,
+            "errors": errors[:10]
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
+
 @main.route('/download_sample_csv')
 @login_required
 def download_sample_csv():
