@@ -12,7 +12,113 @@
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" />
         <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.min.css" rel="stylesheet" />
         <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
         <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+
+        <style>
+            /* Filter Modal Styles */
+            .filter-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 1050;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            }
+
+            .filter-modal-overlay.show {
+                opacity: 1;
+            }
+
+            .filter-modal {
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                max-width: 600px;
+                width: 90%;
+                max-height: 80vh;
+                overflow: hidden;
+                transform: scale(0.7);
+                transition: transform 0.3s ease;
+            }
+
+            .filter-modal-overlay.show .filter-modal {
+                transform: scale(1);
+            }
+
+            .filter-modal-header {
+                background-color: #003366;
+                color: white;
+                padding: 1rem 1.5rem;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 1px solid #dee2e6;
+            }
+
+            .filter-modal-title {
+                margin: 0;
+                font-size: 1.25rem;
+                font-weight: 500;
+            }
+
+            .filter-modal-close {
+                background: none;
+                border: none;
+                color: white;
+                font-size: 1.5rem;
+                cursor: pointer;
+                padding: 0;
+                width: 30px;
+                height: 30px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 4px;
+                transition: background-color 0.2s ease;
+            }
+
+            .filter-modal-close:hover {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+
+            .filter-modal-body {
+                padding: 1.5rem;
+                max-height: 60vh;
+                overflow-y: auto;
+            }
+
+            .filter-modal-footer {
+                padding: 1rem 1.5rem;
+                border-top: 1px solid #dee2e6;
+                display: flex;
+                justify-content: flex-end;
+                gap: 0.5rem;
+                background-color: #f8f9fa;
+            }
+
+            @media (max-width: 768px) {
+                .filter-modal {
+                    width: 95%;
+                    margin: 1rem;
+                }
+
+                .filter-modal-body {
+                    padding: 1rem;
+                }
+
+                .filter-modal-footer {
+                    padding: 1rem;
+                }
+            }
+        </style>
     </head>
 
     <body class="sb-nav-fixed">
@@ -22,7 +128,7 @@
                 <nav class="sb-sidenav accordion sb-sidenav-light" id="sidenavAccordion">
 
                     <div class="sidebar-logo-container" style="text-align: center; padding: 1.5rem 0;">
-                        <a href="{{ url_for('main.index') }}">
+                        <a href="{{ url_for('main.groups') }}">
                             <img src="{{ url_for('static', filename='img/colby_logo.png') }}" alt="Colby logo" style="height: 50px; width: auto;">
                         </a>
                     </div>
@@ -45,9 +151,9 @@
                     </div>
 
                     <div class="sb-sidenav-footer">
-                        <a class="nav-link" href="{{ url_for('auth.logout') }}">
-                            <div class="sb-nav-link-icon"><i class="fas fa-sign-out-alt"></i></div>
-                            Logout
+                        <a class="nav-link" href="{{ url_for('main.settings') }}">
+                            <div class="sb-nav-link-icon"><i class="fas fa-cog"></i></div>
+                            Settings
                         </a>
                     </div>
                 </nav>
@@ -58,7 +164,7 @@
                 <main>
                     <div class="container-fluid px-4">
                         <h1 class="mt-4">Groups</h1>
-                        
+
                         <!-- Flash Messages for Groups Page -->
                         {% with messages = get_flashed_messages(with_categories=true) %}
                             {% if messages %}
@@ -70,86 +176,54 @@
                                 {% endfor %}
                             {% endif %}
                         {% endwith %}
-                        
-                        <div class="mb-3">
-                            <div class="row g-3 align-items-end">
-                                <div class="col-md-3">
-                                    <label for="groupSearch" class="form-label">Search</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text" style="background-color: #003366; color: white;">
-                                            <i class="fas fa-search"></i>
-                                        </span>
-                                        <input type="text" class="form-control" id="groupSearch" placeholder="Search groups by name or type..." aria-label="Search groups">
-                                        <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
-                                            <i class="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
-                                    <label for="filterTripType" class="form-label">Trip Type</label>
-                                    <select class="form-select" id="filterTripType" aria-label="Filter by trip type">
-                                        <option value="">All Types</option>
-                                        <option value="backpacking">Backpacking</option>
-                                        <option value="canoeing">Canoeing</option>
-                                        <option value="basecamp">Basecamp</option>
-                                        <option value="classic maine camp">Classic Maine Camp</option>
-                                        <option value="local exploration">Local Exploration</option>
-                                        <option value="specialty basecamp">Specialty Basecamp</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <label for="filterWater" class="form-label">Water</label>
-                                    <select class="form-select" id="filterWater" aria-label="Filter by water">
-                                        <option value="">All</option>
-                                        <option value="true">Yes</option>
-                                        <option value="false">No</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <label for="filterTent" class="form-label">Tent</label>
-                                    <select class="form-select" id="filterTent" aria-label="Filter by tent">
-                                        <option value="">All</option>
-                                        <option value="true">Yes</option>
-                                        <option value="false">No</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-2">
-                                    <label for="filterOpenSlots" class="form-label">Open Slots</label>
-                                    <select class="form-select" id="filterOpenSlots" aria-label="Filter by open slots">
-                                        <option value="">All</option>
-                                        <option value="true">Has Open Slots</option>
-                                        <option value="false">Full</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-1">
-                                    <button class="btn btn-outline-secondary w-100" type="button" id="clearFilters" title="Clear Filters">
-                                        <i class="fas fa-redo"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="action-row">
-                            <form method="POST" action="{{ url_for('main.sort_students_route') }}" style="display: inline;">
-                                <button type="submit" class="btn btn-navy" 
-                                        onclick="return confirm('This will reassign all students based on their preferences. Are you sure?')">
+
+                        <div class="action-row d-flex justify-content-between align-items-center mb-3">
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">
+                                    Upload CSV
+                                </button>
+                                <button type="button" class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#confirmSortStudentsModal">
                                     Sort Students
                                 </button>
-                            </form>
-                            <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#moveStudentModal">Move Students</button>
-                            <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#swapStudentsModal">Swap Students</button>
-                            <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">Upload CSV</button>
-                            
+                                <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#moveStudentModal">Move Students</button>
+                                <button class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#swapStudentsModal">Swap Students</button>
+                                <form action="{{ url_for('main.export_csv') }}" method="GET" style="display:inline;">
+                                    <button class="btn btn-navy" type="submit">Export to CSV</button>
+                                </form>
+                                <form action="{{ url_for('main.export_pdf') }}" method="GET" style="display:inline;">
+                                    <button class="btn btn-navy" type="submit">Export to PDF</button>
+                                </form>
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                <div class="input-group" style="width: 300px;">
+                                    <span class="input-group-text" style="background-color: #003366; color: white;">
+                                        <i class="fas fa-search"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="groupSearch" placeholder="Search groups..." aria-label="Search groups">
+                                    <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <button class="btn btn-outline-primary btn-sm" type="button" id="filterToggle">
+                                    <i class="fas fa-filter"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm" type="button" id="clearFilters" title="Clear All Filters">
+                                    <i class="fas fa-redo"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Group List -->
                         <div class="groups-list">
+                            {% if trips %}
                             {% for trip in trips %}
                             <div class="group-box"
                                  data-search-text="{{ trip.trip_name|lower }} {{ trip.trip_type|lower }}"
                                  data-trip-type="{{ trip.trip_type|lower }}"
                                  data-water="{{ 'true' if trip.water else 'false' }}"
                                  data-tent="{{ 'true' if trip.tent else 'false' }}"
-                                 data-open-slots="{{ 'true' if trip.has_open_slots else 'false' }}">
+                                 data-open-slots="{{ 'true' if trip.has_open_slots else 'false' }}"
+                                 data-valid="{{ 'true' if trip.validations.overall_valid else 'false' }}">
                                 <div class="group-box__header">
                                     {{ trip.trip_name }} ({{ trip.trip_type }})
                                     <span style="float: right; font-size: 0.9em; font-weight: normal; color: #666;">
@@ -270,11 +344,118 @@
                                 </div>
                             </div>
                         {% endfor %}
+                        <div id="noFilteredTripsMessage" class="alert alert-warning mt-3" role="status" style="display:none;">
+                            No trips match the current search or filter selections.
+                        </div>
+                        {% else %}
+                            <div class="alert alert-info mt-3" role="status">
+                                There are no trips to display yet.
+                            </div>
+                        {% endif %}
                     </div>
                 </main>
             </div>
         </div>
 
+        <!-- Filter Modal Overlay -->
+        <div id="filterModal" class="filter-modal-overlay" style="display: none;">
+            <div class="filter-modal">
+                <div class="filter-modal-header">
+                    <h5 class="filter-modal-title">
+                        <i class="fas fa-filter me-2"></i>Filter Groups
+                    </h5>
+                    <button type="button" class="filter-modal-close" id="closeFilterModal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="filter-modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="filterTripType" class="form-label">Trip Type</label>
+                            <select class="form-select" id="filterTripType" aria-label="Filter by trip type">
+                                <option value="">All Types</option>
+                                <option value="backpacking">Backpacking</option>
+                                <option value="canoeing">Canoeing</option>
+                                <option value="basecamp">Basecamp</option>
+                                <option value="classic maine camp">Classic Maine Camp</option>
+                                <option value="local exploration">Local Exploration</option>
+                                <option value="specialty basecamp">Specialty Basecamp</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="filterWater" class="form-label">Water Activities</label>
+                            <select class="form-select" id="filterWater" aria-label="Filter by water">
+                                <option value="">All</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="filterTent" class="form-label">Tent Required</label>
+                            <select class="form-select" id="filterTent" aria-label="Filter by tent">
+                                <option value="">All</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="filterOpenSlots" class="form-label">Availability</label>
+                            <select class="form-select" id="filterOpenSlots" aria-label="Filter by open slots">
+                                <option value="">All</option>
+                                <option value="true">Has Open Slots</option>
+                                <option value="false">Full</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12">
+                            <label for="filterValidity" class="form-label">Group Validity</label>
+                            <select class="form-select" id="filterValidity" aria-label="Filter by validity">
+                                <option value="">All</option>
+                                <option value="true">Valid</option>
+                                <option value="false">Not Valid</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-modal-footer">
+                    <button class="btn btn-secondary" type="button" id="resetFilters">
+                        <i class="fas fa-undo me-2"></i>Reset
+                    </button>
+                    <button class="btn btn-primary" type="button" id="applyFilters">
+                        <i class="fas fa-check me-2"></i>Apply Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Upload CSV Modal with Column Matching -->
+        <div class="modal fade" id="uploadCSVModal" tabindex="-1" aria-labelledby="uploadCSVModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color: #003366; color: white;">
+                <h5 class="modal-title" id="uploadCSVModalLabel">Upload CSV File</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="csvMatchingForm" method="POST" enctype="multipart/form-data" action="{{ url_for('main.process_matched_csv') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="csv_file" class="form-label">Select CSV File</label>
+                        <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                    </div>
+                    
+                    <div id="columnMatchingContainer" style="display: none;">
+                        <h6 class="mb-3">Match CSV Columns to Database Fields</h6>
+                        <div id="matchingRows"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="submitBtn" class="btn text-white" style="background-color:#003366; display: none;">Upload CSV</button>
+                </div>
+                </form>
+            </div>
+            </div>
+        </div>
 
         <!-- Move Student Modal -->
         <div class="modal fade" id="moveStudentModal" tabindex="-1" aria-labelledby="moveStudentModalLabel" aria-hidden="true">
@@ -284,17 +465,24 @@
                 <h5 class="modal-title" id="moveStudentModalLabel">Move Student</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-        
+
                 <form action="{{ url_for('main.move_student') }}" method="POST">
                 <div class="modal-body">
-                    <p class="text-center text-muted mb-4">Enter the student’s name and choose a new trip.</p>
-        
-                    <!-- Student Text Input -->
+                    <p class="text-center text-muted mb-4">Select a student and choose a new trip.</p>
+
+                    <!-- Student Dropdown -->
                     <div class="mb-3">
-                    <label for="student_name" class="form-label">Student Name or ID</label>
-                    <input type="text" class="form-control" id="student_name" name="student_name" placeholder="Type a student’s name or ID" required>
+                    <label for="student_name" class="form-label">Select Student</label>
+                    <select class="form-select" id="student_name" name="student_name" style="width: 100%;" required>
+                        <option value="">Select a student...</option>
+                        {% for student in students %}
+                            <option value="{{ student.id }}">
+                                {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+                            </option>
+                        {% endfor %}
+                    </select>
                     </div>
-        
+
                     <!-- Trip Dropdown -->
                     <div class="mb-3">
                     <label for="new_trip_id" class="form-label">Select New Trip</label>
@@ -305,9 +493,7 @@
                         {% endfor %}
                     </select>
                     </div>
-                </div>
-        
-                <div class="modal-footer">
+                </div>                <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn text-white" style="background-color: #003366;">Confirm Move</button>
                 </div>
@@ -315,8 +501,8 @@
             </div>
             </div>
         </div>
-  
-  
+
+
 
         <!-- Swap Students Modal -->
         <div class="modal fade" id="swapStudentsModal" tabindex="-1" aria-labelledby="swapStudentsModalLabel" aria-hidden="true">
@@ -326,34 +512,48 @@
                 <h5 class="modal-title" id="swapStudentsModalLabel">Swap Students</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-        
+
                 <form action="{{ url_for('main.swap_students') }}" method="POST">
                 <div class="modal-body">
-                    <p class="text-center text-muted mb-4">Enter the names of two students to swap their trips.</p>
-        
+                    <p class="text-center text-muted mb-4">Select two students to swap their trips.</p>
+
                     <div class="row align-items-center mb-4">
                     <!-- Student 1 -->
                     <div class="col-md-5">
                         <div class="bg-light p-4 rounded">
                         <label class="form-label fw-bold">Student 1</label>
-                        <input type="text" class="form-control" name="student1_name" placeholder="Enter Student 1 Name or ID" required>
+                        <select class="form-select" id="student1_name" name="student1_name" style="width: 100%;" required>
+                            <option value="">Select a student...</option>
+                            {% for student in students %}
+                                <option value="{{ student.id }}">
+                                    {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+                                </option>
+                            {% endfor %}
+                        </select>
                         </div>
                     </div>
-        
+
                     <div class="col-md-2 text-center">
                         <div style="font-size: 40px; color: #005fa3;">⇄</div>
                     </div>
-        
+
                     <!-- Student 2 -->
                     <div class="col-md-5">
                         <div class="bg-light p-4 rounded">
                         <label class="form-label fw-bold">Student 2</label>
-                        <input type="text" class="form-control" name="student2_name" placeholder="Enter Student 2 Name or ID" required>
+                        <select class="form-select" id="student2_name" name="student2_name" style="width: 100%;" required>
+                            <option value="">Select a student...</option>
+                            {% for student in students %}
+                                <option value="{{ student.id }}">
+                                    {{ student.first_name }} {{ student.last_name }} ({{ student.student_id }})
+                                </option>
+                            {% endfor %}
+                        </select>
                         </div>
                     </div>
                     </div>
                 </div>
-        
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn text-white" style="background-color: #005fa3;">Confirm Swap</button>
@@ -362,83 +562,237 @@
             </div>
             </div>
         </div>
-  
 
-        <!-- Upload CSV Modal -->
-        <div class="modal fade" id="uploadCSVModal" tabindex="-1" aria-labelledby="uploadCSVModalLabel" aria-hidden="true">
+
+        <!-- Confirm Sort Students Modal -->
+        <div class="modal fade" id="confirmSortStudentsModal" tabindex="-1" aria-labelledby="confirmSortStudentsModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header" style="background-color:#003366;color:white;">
-                <h5 class="modal-title" id="uploadCSVModalLabel">Upload CSV File</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form action="{{ url_for('main.upload_csv') }}" method="POST" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <p class="text-center text-muted mb-4">
-                    Upload a CSV file containing student and trip information.
-                    </p>
-                    <div class="mb-3">
-                    <label for="csvFile" class="form-label">Choose CSV File</label>
-                    <input class="form-control" type="file" id="csvFile" name="csv_file" accept=".csv" required>
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#003366;color:white;">
+                        <h5 class="modal-title" id="confirmSortStudentsModalLabel">Confirm Reassignment</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <form action="{{ url_for('main.sort_students_route') }}" method="POST">
+                        <div class="modal-body">
+                            <div class="alert alert-danger text-center mb-0" role="alert">
+                                <strong>Warning:</strong> This will reassign all students based on their preferences. This cannot be undone.
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn text-white" style="background-color:#003366;">Reassign Students</button>
+                        </div>
+                    </form>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn text-white" style="background-color:#003366;">Upload</button>
-                </div>
-                </form>
-            </div>
             </div>
         </div>
-  
 
         <!-- Scripts -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/umd/simple-datatables.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
         <script src="{{ url_for('static', filename='js/datatables-simple-demo.js') }}"></script>
         <script src="{{ url_for('static', filename='js/groups.js') }}"></script>
+
+        <!-- CSV Column Matching Script -->
         <script>
-            window.addEventListener('DOMContentLoaded', event => {
-                const tables = document.querySelectorAll('.datatables-table');
-                tables.forEach(table => new simpleDatatables.DataTable(table));
-            });
-        </script>
-        <script>
-            window.addEventListener('DOMContentLoaded', () => {
-                // Collect all student names from tables
-                const studentNames = [];
-                document.querySelectorAll('.datatables-table tbody tr').forEach(row => {
-                    const first = row.cells[1]?.textContent.trim();
-                    const last = row.cells[2]?.textContent.trim();
-                    if (first && last) studentNames.push(`${first} ${last}`);
-                });
-                const uniqueNames = [...new Set(studentNames)];
-            
-                // Helper: attach autocomplete dropdown to an input element
-                function attachAutocomplete(inputEl) {
-                    if (!inputEl) return;
-            
-                    const dataList = document.createElement('datalist');
-                    const listId = (inputEl.name || inputEl.id) + '-list';
-                    dataList.id = listId;
-            
-                    uniqueNames.forEach(name => {
-                        const option = document.createElement('option');
-                        option.value = name;
-                        dataList.appendChild(option);
-                    });
-            
-                    document.body.appendChild(dataList);
-                    inputEl.setAttribute('list', dataList.id);
+        const dbFields = [
+            { value: '', label: '-- Skip Column --' },
+            { value: 'student_id', label: 'Student ID' },
+            { value: 'first_name', label: 'First Name' },
+            { value: 'last_name', label: 'Last Name' },
+            { value: 'email', label: 'Email' },
+            { value: 'gender', label: 'Gender' },
+            { value: 'athletic_team', label: 'Athletic Team' },
+            { value: 'hometown', label: 'Hometown' },
+            { value: 'dorm', label: 'Dorm' },
+            { value: 'water_comfort', label: 'Water Comfort' },
+            { value: 'tent_comfort', label: 'Tent Comfort' },
+            { value: 'trip_name', label: 'Trip Name' },
+            { value: 'trip_type', label: 'Trip Type' },
+            { value: 'trip_pref_1', label: 'Trip Preference 1' },
+            { value: 'trip_pref_2', label: 'Trip Preference 2' },
+            { value: 'trip_pref_3', label: 'Trip Preference 3' },
+            { value: 'poc', label: 'POC' },
+            { value: 'fli_international', label: 'FLI/International' },
+            { value: 'notes', label: 'Notes' }
+        ];
+
+        document.getElementById('csv_file').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const text = event.target.result;
+                parseCSV(text);
+            };
+            reader.readAsText(file);
+        });
+
+        function parseCSV(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            if (lines.length === 0) return;
+
+            // Parse CSV (handling quoted fields)
+            function parseCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
                 }
-            
-                // Apply to Move + Swap inputs
-                attachAutocomplete(document.getElementById('student_name')); // Move
-                attachAutocomplete(document.querySelector('[name="student1_name"]')); // Swap 1
-                attachAutocomplete(document.querySelector('[name="student2_name"]')); // Swap 2
+                result.push(current.trim());
+                return result;
+            }
+
+            const headerLine = parseCSVLine(lines[0]);
+            const csvColumns = headerLine.map(col => col.replace(/^"|"$/g, '').trim());
+
+            showColumnMatching(csvColumns);
+        }
+
+        function showColumnMatching(csvColumns) {
+            const container = document.getElementById('matchingRows');
+            container.innerHTML = '';
+
+            csvColumns.forEach((csvCol, index) => {
+                const row = document.createElement('div');
+                row.className = 'mb-3';
+                
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.textContent = csvCol;
+                
+                const select = document.createElement('select');
+                select.className = 'form-select';
+                select.name = csvCol;
+                select.id = `match_${index}`;
+                
+                // Auto-match common column names
+                let autoMatch = '';
+                const csvLower = csvCol.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                if (csvLower.includes('student') && csvLower.includes('id')) autoMatch = 'student_id';
+                else if (csvLower.includes('first') && csvLower.includes('name')) autoMatch = 'first_name';
+                else if (csvLower.includes('last') && csvLower.includes('name')) autoMatch = 'last_name';
+                else if (csvLower.includes('email')) autoMatch = 'email';
+                else if (csvLower.includes('gender') || csvLower.includes('sex')) autoMatch = 'gender';
+                else if (csvLower.includes('athletic') || csvLower.includes('team') || csvLower.includes('sport')) autoMatch = 'athletic_team';
+                else if (csvLower.includes('hometown') || csvLower.includes('city')) autoMatch = 'hometown';
+                else if (csvLower.includes('dorm') || csvLower.includes('residence')) autoMatch = 'dorm';
+                else if (csvLower.includes('water') && csvLower.includes('comfort')) autoMatch = 'water_comfort';
+                else if (csvLower.includes('tent') && csvLower.includes('comfort')) autoMatch = 'tent_comfort';
+                else if (csvLower.includes('trip') && csvLower.includes('name')) autoMatch = 'trip_name';
+                else if (csvLower.includes('trip') && csvLower.includes('type')) autoMatch = 'trip_type';
+                else if (csvLower.includes('pref') && csvLower.includes('1')) autoMatch = 'trip_pref_1';
+                else if (csvLower.includes('pref') && csvLower.includes('2')) autoMatch = 'trip_pref_2';
+                else if (csvLower.includes('pref') && csvLower.includes('3')) autoMatch = 'trip_pref_3';
+                else if (csvLower.includes('poc')) autoMatch = 'poc';
+                else if (csvLower.includes('fli') || csvLower.includes('international')) autoMatch = 'fli_international';
+                else if (csvLower.includes('note')) autoMatch = 'notes';
+
+                dbFields.forEach(field => {
+                    const option = document.createElement('option');
+                    option.value = field.value;
+                    option.textContent = field.label;
+                    if (field.value === autoMatch) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+                
+                row.appendChild(label);
+                row.appendChild(select);
+                container.appendChild(row);
             });
-            </script>
+
+            // Add Action dropdown at the end
+            const actionRow = document.createElement('div');
+            actionRow.className = 'mb-3';
             
-    
+            const actionLabel = document.createElement('label');
+            actionLabel.className = 'form-label';
+            actionLabel.textContent = 'Action';
+            
+            const actionSelect = document.createElement('select');
+            actionSelect.className = 'form-select';
+            actionSelect.name = 'importMode';
+            actionSelect.id = 'importMode';
+            actionSelect.required = true;
+            
+            const addOption = document.createElement('option');
+            addOption.value = 'add';
+            addOption.textContent = 'Add New Students';
+            actionSelect.appendChild(addOption);
+            
+            const updateOption = document.createElement('option');
+            updateOption.value = 'update';
+            updateOption.textContent = 'Update Existing Students';
+            actionSelect.appendChild(updateOption);
+            
+            actionRow.appendChild(actionLabel);
+            actionRow.appendChild(actionSelect);
+            container.appendChild(actionRow);
+
+            // Show the container and submit button
+            document.getElementById('columnMatchingContainer').style.display = 'block';
+            document.getElementById('submitBtn').style.display = 'inline-block';
+        }
+
+        // Handle form submission with AJAX
+        document.getElementById('csvMatchingForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Uploading...';
+            
+            fetch(this.action, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`CSV uploaded successfully!\nAdded: ${data.added}, Updated: ${data.updated}, Skipped: ${data.skipped}`);
+                    if (data.errors && data.errors.length > 0) {
+                        console.warn('Errors:', data.errors);
+                    }
+                    // Close modal and reload page
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadCSVModal'));
+                    modal.hide();
+                    window.location.reload();
+                } else {
+                    alert('Error: ' + (data.message || 'Failed to upload CSV'));
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Upload CSV';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error uploading CSV: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Upload CSV';
+            });
+        });
+
+        // Reset modal when closed
+        document.getElementById('uploadCSVModal').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('csv_file').value = '';
+            document.getElementById('columnMatchingContainer').style.display = 'none';
+            document.getElementById('submitBtn').style.display = 'none';
+        });
+        </script>
+
     </body>
 </html>
