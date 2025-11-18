@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SECRET_KEY = os.getenv('SECRET_KEY')
+# print(SECRET_KEY)
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
 if ENVIRONMENT == 'production' and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):

@@ -73,12 +73,12 @@ def authorize():
         app_user = create_new_user(google_user)
     else:
         # If user exists but role is None, check if they should be a student
-        if app_user.role is None:
-            student = Student.query.filter_by(email=google_user['email']).first()
-            if student:
+        student = Student.query.filter_by(email=google_user['email']).first()
+        if student:
+            app_user.student = student
+            if app_user.role is None:
                 app_user.role = 'student'
-                student.user_email = google_user['email']
-                db.session.commit()
+            db.session.commit()
 
     login_user(app_user)
     if app_user.role is None:
@@ -121,12 +121,12 @@ def create_new_user(user):
         last_name=user['family_name'],
         role=role
     )
+
+    # If this user is a student, link the user & student together
+    if student:
+        new_user.student = student
+
     db.session.add(new_user)
     db.session.commit()
-
-    # If this user is a student, link the user_email in the Student record
-    if student:
-        student.user_email = user['email']
-        db.session.commit()
 
     return new_user
