@@ -14,7 +14,7 @@ load_dotenv()
 
 app = Flask(__name__)
 SECRET_KEY = os.getenv('SECRET_KEY')
-print(SECRET_KEY)
+# print(SECRET_KEY)
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable must be set")
 app.config['SECRET_KEY'] = SECRET_KEY

@@ -36,7 +36,31 @@
                 <div class="card shadow border-0 rounded-lg">
                     <div class="card-body text-center p-5">
                         <h2 class="fw-bold mb-3">Your Trip</h2>
-                        <p class="lead">TODO</p>
+                        {% if current_user.student and current_user.student.trip %}
+                        <p class="lead">Dear {{ current_user.student.first_name }},</p>
+                        <p class="lead">You have been placed in the <strong>{{ current_user.student.trip.trip_name }}</strong> COOT trip! We're thrilled to welcome you to campus and can't wait to see you embark on your first-year journey with us.</p>
+                        <p class="lead">Here is some information about your trip:</p>
+                        <ul class="list-group mb-4 text-start">
+                            <li class="list-group-item"><strong>Trip Name:</strong> {{ current_user.student.trip.trip_name }}</li>
+                            <li class="list-group-item"><strong>Trip Type:</strong> {{ current_user.student.trip.trip_type }}</li>
+                            {% if current_user.student.trip.water %}
+                                <li class="list-group-item"><strong>Water Activities:</strong> Yes</li>
+                            {% else %}
+                                <li class="list-group-item"><strong>Water Activities:</strong> No</li>
+                            {% endif %}
+
+                            {% if current_user.student.trip.tent %}
+                                <li class="list-group-item"><strong>Tent Camping:</strong> Yes</li>
+                            {% else %}
+                                <li class="list-group-item"><strong>Tent Camping:</strong> No</li>
+                            {% endif %}
+                        </ul>
+                        <p class="lead">If you have any questions or need further assistance, please don't hesitate to reach out at coot@colby.edu.</p>
+                        <p class="lead">Warm Regards,</p>
+                        <p class="lead">The COOT Team</p>
+                        {% else %}
+                        <p class="lead text-muted">No trip assigned</p>
+                        {% endif %}
                     </div>
                 </div>
             </div>
