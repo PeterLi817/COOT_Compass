@@ -6,19 +6,22 @@ from auth import auth_blueprint
 from flask_login import LoginManager
 from auth import init_oauth
 import os
-
-# Load variables from .env file (initial load)
-# Remove for production use
 from dotenv import load_dotenv
+
 load_dotenv()
 
-app = Flask(__name__)
 SECRET_KEY = os.getenv('SECRET_KEY')
 # print(SECRET_KEY)
+ENVIRONMENT = os.getenv('ENVIRONMENT')
+SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
+if ENVIRONMENT == 'production' and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
+
+app = Flask(__name__)
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable must be set")
 app.config['SECRET_KEY'] = SECRET_KEY
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///coot.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 
@@ -40,3 +43,6 @@ if __name__ == "__main__":
         add_fake_data()
 
     app.run(debug=True)
+else:
+    with app.app_context():
+        db.create_all()  # Create database tables
