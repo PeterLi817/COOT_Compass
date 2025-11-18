@@ -252,5 +252,75 @@ window.addEventListener('DOMContentLoaded', event => {
             searchInput.blur();
         }
     });
+
+    // API Integration - Initialize API client
+    setupAPIIntegration();
 });
+
+// API Integration Functions
+function setupAPIIntegration() {
+    // Test API connection when page loads
+    if (window.cootAPI) {
+        window.cootAPI.healthCheck().then(result => {
+            console.log('API Status:', result.message);
+        }).catch(error => {
+            console.warn('API not available:', error);
+        });
+    }
+
+    // Override sort button to use API instead of form
+    const sortButton = document.querySelector('button[data-bs-target="#confirmSortStudentsModal"]');
+    if (sortButton) {
+        sortButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('Are you sure you want to sort all students? This will reset current assignments and assign students based on their preferences.')) {
+                sortStudentsWithAPI();
+            }
+        });
+    }
+
+    // Override move student form submission
+    const moveForm = document.querySelector('#moveStudentModal form');
+    if (moveForm) {
+        moveForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const studentId = document.getElementById('student_name').value;
+            const tripId = document.getElementById('new_trip_id').value;
+            
+            if (studentId && tripId) {
+                moveStudentWithAPI(studentId, tripId);
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('moveStudentModal'));
+                if (modal) modal.hide();
+            } else {
+                showMessage('Please select both a student and a trip.', 'error');
+            }
+        });
+    }
+
+    // Override swap students form submission
+    const swapForm = document.querySelector('#swapStudentsModal form');
+    if (swapForm) {
+        swapForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const student1Id = document.getElementById('student1_name').value;
+            const student2Id = document.getElementById('student2_name').value;
+            
+            if (student1Id && student2Id) {
+                if (student1Id === student2Id) {
+                    showMessage('Please select two different students.', 'error');
+                    return;
+                }
+                swapStudentsWithAPI(student1Id, student2Id);
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('swapStudentsModal'));
+                if (modal) modal.hide();
+            } else {
+                showMessage('Please select both students.', 'error');
+            }
+        });
+    }
+}
 
