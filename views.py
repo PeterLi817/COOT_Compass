@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
-from models import Student, Trip, db, User
+from models import Student, Trip, db, User, AppSettings
 from flask_login import login_required, current_user
 import csv
 from io import StringIO
@@ -37,7 +37,32 @@ def get_users():
 @main.route('/student_view')
 @student_required
 def student_view():
-    return render_template('student_view.html', current_user=current_user, now=datetime.now())
+    settings = AppSettings.get()
+    show_trips = settings.show_trips_to_students
+    return render_template('student_view.html', current_user=current_user, now=datetime.now(), show_trips=show_trips)
+
+@main.route('/api/settings/show_trips', methods=['GET'])
+@admin_required
+def api_get_show_trips():
+    settings = AppSettings.get()
+    print(settings.show_trips_to_students)
+    return jsonify({'show_trips_to_students': settings.show_trips_to_students})
+
+
+@main.route('/api/settings/toggle_show_trips', methods=['POST'])
+@admin_required
+def api_toggle_show_trips():
+    data = request.get_json() or {}
+    value = data.get('value')
+
+    settings = AppSettings.get()
+    if value is None:
+        settings.show_trips_to_students = not settings.show_trips_to_students
+    else:
+        settings.show_trips_to_students = bool(value)
+
+    db.session.commit()
+    return jsonify({'success': True, 'show_trips_to_students': settings.show_trips_to_students})
 
 @main.route('/no_access')
 @login_required

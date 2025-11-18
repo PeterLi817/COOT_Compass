@@ -92,9 +92,10 @@
                         <div class="card-body">
                             <div class="d-grid gap-3 d-sm-flex justify-content-sm-center flex-wrap">
 
-                                <a href="#" class="btn btn-primary btn-lg">
-                                    <i class="fas fa-map-signs me-2"></i> Show Trips to Students
-                                </a>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="showTripsSwitch" aria-checked="false">
+                                    <label class="form-check-label" for="showTripsSwitch" id="showTripsLabel">Show trips to students</label>
+                                </div>
 
                                 <a href="#" id="editPermissionsBtn" class="btn btn-primary btn-lg">
                                     <i class="fas fa-wrench me-2"></i> Edit Access Permissions
