@@ -973,6 +973,20 @@ def sort_students_route():
 
     return redirect(url_for('main.groups'))
 
+@main.route('/api/sort-students', methods=['POST'])
+@admin_required
+def api_sort_students():
+    """API endpoint for AJAX custom sort criteria."""
+    try:
+        data = request.get_json(force=True)
+        criteria = data.get('criteria', [])
+        stats = sort_students(custom_criteria=criteria)
+        db.session.commit()
+        return jsonify({'success': True, 'stats': stats, 'message': 'Sorting completed.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
+
 @main.route('/update-user-role', methods=['POST'])
 @manager_required
 def update_user_role():
