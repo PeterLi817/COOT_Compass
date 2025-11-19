@@ -179,9 +179,6 @@
 
                         <div class="action-row d-flex justify-content-between align-items-center mb-3">
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">
-                                    Upload CSV
-                                </button>
                                 <button type="button" class="btn btn-navy" data-bs-toggle="modal" data-bs-target="#confirmSortStudentsModal">
                                     Sort Students
                                 </button>
@@ -288,26 +285,6 @@
                                         {% endfor %}
                                     </div>
                                     {% endif %}
-                                    </div>
-
-                                    <!-- Leaders -->
-                                    <h3 class="section-h">Leaders</h3>
-                                    <div class="card mb-4">
-                                        <div class="card-header"><i class="fas fa-table me-1"></i> Leaders</div>
-                                        <div class="card-body">
-                                            <table class="datatables-table" id="leadersTable{{ trip.id }}">
-                                                <thead>
-                                                    <tr>
-                                                        <th>ID</th><th>First Name</th><th>Last Name</th>
-                                                        <th>Gender</th><th>Athletic Team</th><th>Hometown</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
-                                                    <tr><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td><td>x</td></tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
                                     </div>
 
                                     <!-- Students -->
@@ -424,36 +401,6 @@
                         <i class="fas fa-check me-2"></i>Apply Filters
                     </button>
                 </div>
-            </div>
-        </div>
-
-
-        <!-- Upload CSV Modal with Column Matching -->
-        <div class="modal fade" id="uploadCSVModal" tabindex="-1" aria-labelledby="uploadCSVModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content">
-                <div class="modal-header" style="background-color: #003366; color: white;">
-                <h5 class="modal-title" id="uploadCSVModalLabel">Upload CSV File</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <form id="csvMatchingForm" method="POST" enctype="multipart/form-data" action="{{ url_for('main.process_matched_csv') }}">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="csv_file" class="form-label">Select CSV File</label>
-                        <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
-                    </div>
-                    
-                    <div id="columnMatchingContainer" style="display: none;">
-                        <h6 class="mb-3">Match CSV Columns to Database Fields</h6>
-                        <div id="matchingRows"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" id="submitBtn" class="btn text-white" style="background-color:#003366; display: none;">Upload CSV</button>
-                </div>
-                </form>
-            </div>
             </div>
         </div>
 
@@ -668,16 +615,16 @@
             csvColumns.forEach((csvCol, index) => {
                 const row = document.createElement('div');
                 row.className = 'mb-3';
-                
+
                 const label = document.createElement('label');
                 label.className = 'form-label';
                 label.textContent = csvCol;
-                
+
                 const select = document.createElement('select');
                 select.className = 'form-select';
                 select.name = csvCol;
                 select.id = `match_${index}`;
-                
+
                 // Auto-match common column names
                 let autoMatch = '';
                 const csvLower = csvCol.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -709,7 +656,7 @@
                     }
                     select.appendChild(option);
                 });
-                
+
                 row.appendChild(label);
                 row.appendChild(select);
                 container.appendChild(row);
@@ -718,27 +665,27 @@
             // Add Action dropdown at the end
             const actionRow = document.createElement('div');
             actionRow.className = 'mb-3';
-            
+
             const actionLabel = document.createElement('label');
             actionLabel.className = 'form-label';
             actionLabel.textContent = 'Action';
-            
+
             const actionSelect = document.createElement('select');
             actionSelect.className = 'form-select';
             actionSelect.name = 'importMode';
             actionSelect.id = 'importMode';
             actionSelect.required = true;
-            
+
             const addOption = document.createElement('option');
             addOption.value = 'add';
             addOption.textContent = 'Add New Students';
             actionSelect.appendChild(addOption);
-            
+
             const updateOption = document.createElement('option');
             updateOption.value = 'update';
             updateOption.textContent = 'Update Existing Students';
             actionSelect.appendChild(updateOption);
-            
+
             actionRow.appendChild(actionLabel);
             actionRow.appendChild(actionSelect);
             container.appendChild(actionRow);
@@ -751,12 +698,12 @@
         // Handle form submission with AJAX
         document.getElementById('csvMatchingForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData(this);
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Uploading...';
-            
+
             fetch(this.action, {
                 method: 'POST',
                 body: formData

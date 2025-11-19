@@ -47,7 +47,7 @@ def student_view():
 @admin_required
 def api_get_show_trips():
     settings = AppSettings.get()
-    print(settings.show_trips_to_students)
+    # print(settings.show_trips_to_students)
     return jsonify({'show_trips_to_students': settings.show_trips_to_students})
 
 
@@ -523,15 +523,15 @@ def upload_csv():
     try:
         stream = io.StringIO(file.stream.read().decode("utf-8"))
         csv_input = csv.DictReader(stream)
-        
+
         # Normalize column names (case-insensitive, strip whitespace)
         def normalize_key(key):
             return key.strip().lower().replace(' ', '_').replace('-', '_') if key else ''
-        
+
         # Create a mapping of normalized column names to actual column names
         fieldnames = csv_input.fieldnames or []
         column_map = {normalize_key(fn): fn for fn in fieldnames}
-        
+
         def get_value(row, possible_keys):
             """Get value from row using possible normalized keys"""
             for key in possible_keys:
@@ -544,7 +544,7 @@ def upload_csv():
         added_count = 0
         updated_count = 0
         skipped_count = 0
-        
+
         for row in csv_input:
             # Try multiple possible column name variations
             student_id = get_value(row, ['student_id', 'Student ID', 'student id', 'ID'])
@@ -896,7 +896,7 @@ def process_matched_trips_csv():
                         continue
                     if not mapped.get('capacity'):
                         mapped['capacity'] = 10  # Default capacity
-                    
+
                     new_trip = Trip(**mapped)
                     db.session.add(new_trip)
                     added += 1
