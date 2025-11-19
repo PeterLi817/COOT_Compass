@@ -58,9 +58,11 @@ class COOTAPI {
         });
     }
 
-    async sortStudents() {
+    async sortStudents(criteria = null) {
+        const payload = criteria ? { criteria } : {};
         return this.request('/sort-students', {
-            method: 'POST'
+            method: 'POST',
+            body: JSON.stringify(payload)
         });
     }
 
@@ -192,3 +194,6 @@ function reinitializeGroupsEventListeners() {
     // Re-apply any other event listeners that might be needed
     // This would include move/swap form handlers if they're not already set up globally
 }
+
+// Make sortStudentsWithAPI available globally
+window.sortStudentsWithAPI = sortStudentsWithAPI;

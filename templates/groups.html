@@ -516,18 +516,69 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header" style="background-color:#003366;color:white;">
-                        <h5 class="modal-title" id="confirmSortStudentsModalLabel">Confirm Reassignment</h5>
+                        <h5 class="modal-title" id="confirmSortStudentsModalLabel">Sort Students</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form action="{{ url_for('main.sort_students_route') }}" method="POST">
+                    <form>
                         <div class="modal-body">
-                            <div class="alert alert-danger text-center mb-0" role="alert">
-                                <strong>Warning:</strong> This will reassign all students based on their preferences. This cannot be undone.
+                            <p>Are you sure you want to sort all students? This will reassign students to trips based on their preferences and the sorting algorithm.</p>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Sort Criteria Priority</label>
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="row g-2 align-items-center mb-2">
+                                        <div class="col-8">
+                                            <select class="form-select sort-criteria-select" required>
+                                                <option value="" selected disabled>Select...</option>
+                                                <option value="dorm">Dorm</option>
+                                                <option value="sports_team">Sports Team</option>
+                                                <option value="gender">Gender</option>
+                                                <option value="trip_preference">Trip Preference</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-4 text-end text-muted">Priority 1</div>
+                                    </div>
+                                    <div class="row g-2 align-items-center mb-2">
+                                        <div class="col-8">
+                                            <select class="form-select sort-criteria-select" required>
+                                                <option value="" selected disabled>Select...</option>
+                                                <option value="dorm">Dorm</option>
+                                                <option value="sports_team">Sports Team</option>
+                                                <option value="gender">Gender</option>
+                                                <option value="trip_preference">Trip Preference</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-4 text-end text-muted">Priority 2</div>
+                                    </div>
+                                    <div class="row g-2 align-items-center mb-2">
+                                        <div class="col-8">
+                                            <select class="form-select sort-criteria-select" required>
+                                                <option value="" selected disabled>Select...</option>
+                                                <option value="dorm">Dorm</option>
+                                                <option value="sports_team">Sports Team</option>
+                                                <option value="gender">Gender</option>
+                                                <option value="trip_preference">Trip Preference</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-4 text-end text-muted">Priority 3</div>
+                                    </div>
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-8">
+                                            <select class="form-select sort-criteria-select" required>
+                                                <option value="" selected disabled>Select...</option>
+                                                <option value="dorm">Dorm</option>
+                                                <option value="sports_team">Sports Team</option>
+                                                <option value="gender">Gender</option>
+                                                <option value="trip_preference">Trip Preference</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-4 text-end text-muted">Priority 4</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="submit" class="btn text-white" style="background-color:#003366;">Reassign Students</button>
+                            <button type="submit" class="btn text-white" style="background-color:#003366;">Sort</button>
                         </div>
                     </form>
                 </div>

@@ -5,7 +5,8 @@ import random
 class COOTSorter:
     """Intelligent COOT student sorting algorithm."""
     
-    def __init__(self):
+    def __init__(self, custom_criteria=None):
+        self.custom_criteria = custom_criteria or []
         self.trip_trackers = {}
         self.trips_by_type = defaultdict(list)
         self.stats = {
@@ -296,10 +297,11 @@ class COOTSorter:
             self.stats['first_choice_rate'] = 0
 
 
-def sort_students():
+def sort_students(custom_criteria=None):
     """
     Main entry point for sorting students.
     Returns statistics about the sorting process.
+    Accepts optional custom_criteria for sorting priorities.
     """
-    sorter = COOTSorter()
+    sorter = COOTSorter(custom_criteria=custom_criteria)
     return sorter.sort_all_students()

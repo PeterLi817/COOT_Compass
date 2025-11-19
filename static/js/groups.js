@@ -268,16 +268,9 @@ function setupAPIIntegration() {
         });
     }
 
-    // Override sort button to use API instead of form
+    // Remove legacy confirm dialog and direct API call for sort button
     const sortButton = document.querySelector('button[data-bs-target="#confirmSortStudentsModal"]');
-    if (sortButton) {
-        sortButton.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (confirm('Are you sure you want to sort all students? This will reset current assignments and assign students based on their preferences.')) {
-                sortStudentsWithAPI();
-            }
-        });
-    }
+    // No custom click handler needed; let Bootstrap open the modal and handle via modal form
 
     // Override move student form submission
     const moveForm = document.querySelector('#moveStudentModal form');
@@ -321,6 +314,70 @@ function setupAPIIntegration() {
                 showMessage('Please select both students.', 'error');
             }
         });
+    }
+
+    // --- Custom Sort Criteria Logic ---
+    // Handler for the Sort Students modal (custom criteria)
+    const sortModal = document.getElementById('confirmSortStudentsModal');
+    if (sortModal) {
+        const sortForm = sortModal.querySelector('form');
+        if (sortForm) {
+            sortForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                // Collect custom sort criteria from the modal
+                const selects = sortForm.querySelectorAll('.sort-criteria-select');
+                const criteria = [];
+                const used = new Set();
+                selects.forEach((sel, idx) => {
+                    if (sel.value && !used.has(sel.value)) {
+                        criteria.push({
+                            type: sel.value,
+                            priority: idx + 1
+                        });
+                        used.add(sel.value);
+                    }
+                });
+                if (criteria.length < selects.length) {
+                    alert('Please select a unique sort criterion for each priority.');
+                    return;
+                }
+                // Use the global API client if available
+                if (window.cootAPI && window.cootAPI.sortStudents) {
+                    window.cootAPI.sortStudents(criteria)
+                        .then(data => {
+                            if (data.success) {
+                                window.location.reload();
+                            } else {
+                                alert('Sort failed: ' + (data.message || 'Unknown error'));
+                            }
+                        })
+                        .catch(err => {
+                            alert('Sort failed: ' + err.message);
+                        });
+                } else {
+                    // Fallback to direct fetch
+                    fetch('/api/sort-students', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': (document.querySelector('input[name=csrf_token]') || {}).value || ''
+                        },
+                        body: JSON.stringify({ criteria })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert('Sort failed: ' + (data.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(err => {
+                        alert('Sort failed: ' + err.message);
+                    });
+                }
+            });
+        }
     }
 }
 
