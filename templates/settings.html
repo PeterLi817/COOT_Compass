@@ -92,9 +92,11 @@
                         <div class="card-body">
                             <div class="d-grid gap-3 d-sm-flex justify-content-sm-center flex-wrap">
 
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="showTripsSwitch" aria-checked="false">
-                                    <label class="form-check-label" for="showTripsSwitch" id="showTripsLabel">Show trips to students</label>
+                                <div class="btn btn-secondary btn-lg d-flex align-items-center">
+                                    <div class="form-check form-switch mb-0">
+                                        <input class="form-check-input" type="checkbox" id="showTripsSwitch" aria-checked="false">
+                                        <label class="form-check-label ms-2" for="showTripsSwitch" id="showTripsLabel">Show trips to students</label>
+                                    </div>
                                 </div>
 
                                 <a href="#" id="editPermissionsBtn" class="btn btn-primary btn-lg">
@@ -178,8 +180,20 @@
                             <span id="usersErrorText">Failed to load users.</span>
                         </div>
                         <div class="alert alert-info small mt-3" role="alert">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Note:</strong> To add a new admin, the user must first sign in to the app with Google. If they are not showing in the system, ask them to visit the app and sign in first.
+                            <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                            <strong>Note:</strong>
+                            <div class="mt-1">
+                            Before you can make someone an admin, they must first sign in to the app using Google.
+                            On their first sign-in, they will see a message saying <em>"You don't have access to this app."</em>
+                            This is expected — their account is simply being created in the system.
+                            </div>
+                            <div class="mt-1">
+                            After they've signed in once, they'll appear in the user list and an existing admin can update their permissions.
+                            </div>
+                            <div class="mt-1">
+                            Also note: by default, only <strong>Admins</strong> and <strong>Managers</strong> are shown in the list.
+                            You may need to uncheck this filter at the top to see the new user.
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
