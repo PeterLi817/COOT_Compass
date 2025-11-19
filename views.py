@@ -192,7 +192,7 @@ def add_student():
     return redirect(url_for('main.first_years'))
 
 @main.route('/edit-student', methods=['POST'])
-@login_required
+@admin_required
 def edit_student():
     # Get the database primary key (id) from the hidden form field
     student_db_id = request.form.get('student_db_id')
@@ -354,7 +354,7 @@ def add_trip():
     return redirect(url_for('main.trips'))
 
 @main.route('/edit-trip', methods=['POST'])
-@login_required
+@admin_required
 def edit_trip():
     trip_id = request.form.get('trip_id')
 
@@ -619,7 +619,7 @@ def upload_csv():
     return redirect(url_for('main.groups'))
 
 @main.route('/process_matched_csv', methods=['POST'])
-@login_required
+@admin_required
 def process_matched_csv():
     try:
         file = request.files.get("csv_file")
@@ -724,7 +724,7 @@ def process_matched_csv():
         return jsonify({"success": False, "message": str(e)}), 500
 
 @main.route('/export_csv')
-@login_required
+@admin_required
 def export_csv():
     output = io.StringIO()
     writer = csv.writer(output)
@@ -763,7 +763,7 @@ def export_csv():
     )
 
 @main.route('/export_pdf')
-@login_required
+@admin_required
 def export_pdf():
     try:
         pdf_buffer = io.BytesIO()
@@ -829,7 +829,7 @@ def export_pdf():
         return f"Error generating PDF: {str(e)}", 500
 
 @main.route('/process_matched_trips_csv', methods=['POST'])
-@login_required
+@admin_required
 def process_matched_trips_csv():
     try:
         file = request.files.get("csv_file")
@@ -924,7 +924,7 @@ def process_matched_trips_csv():
         return jsonify({"success": False, "message": str(e)}), 500
 
 @main.route('/download_sample_csv')
-@login_required
+@admin_required
 def download_sample_csv():
     output = io.StringIO()
     writer = csv.writer(output)
