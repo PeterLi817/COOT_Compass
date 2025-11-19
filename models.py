@@ -92,3 +92,22 @@ class Trip(db.Model):
 
     def __repr__(self):
         return f"<Trip id={self.id} name='{self.trip_name}' type='{self.trip_type}' capacity={self.capacity}>"
+
+# -----------------------
+# APPLICATION SETTINGS MODEL
+# -----------------------
+class AppSettings(db.Model):
+    __tablename__ = 'app_settings'
+
+    id = db.Column(db.Integer, primary_key=True)
+    show_trips_to_students = db.Column(db.Boolean, nullable=False, default=False)
+
+    @classmethod
+    def get(cls):
+        # ensure there is always exactly one row
+        settings = cls.query.first()
+        if not settings:
+            settings = cls(show_trips_to_students=False)
+            db.session.add(settings)
+            db.session.commit()
+        return settings

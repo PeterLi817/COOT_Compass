@@ -65,9 +65,7 @@
                         <div class="action-row">
                             <button class="btn btn-navy" type="button" data-bs-toggle="modal" data-bs-target="#uploadCSVModal">Upload CSV</button>
                             <button class="btn btn-navy" type="button" data-bs-toggle="modal" data-bs-target="#addTripModal"><i class="fas fa-plus me-1"></i> Add a trip</button>
-                            <button class="btn btn-navy" type="button" data-bs-toggle="modal" data-bs-target="#removeTripModal">- Remove</button>
-                            <!-- <button class="btn btn-navy">Move</button>
-                            <button class="btn btn-navy">Swap</button> -->
+                            <button class="btn btn-navy" type="button" data-bs-toggle="modal" data-bs-target="#removeTripModal">- Remove a trip</button>
 
                         </div>
                         <div class="card mb-4">
@@ -195,7 +193,7 @@
                         <label for="csv_file" class="form-label">Select CSV File</label>
                         <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
                     </div>
-                    
+
                     <div id="columnMatchingContainer" style="display: none;">
                         <h6 class="mb-3">Match CSV Columns to Database Fields</h6>
                         <div id="matchingRows"></div>
@@ -332,16 +330,16 @@
             csvColumns.forEach((csvCol, index) => {
                 const row = document.createElement('div');
                 row.className = 'mb-3';
-                
+
                 const label = document.createElement('label');
                 label.className = 'form-label';
                 label.textContent = csvCol;
-                
+
                 const select = document.createElement('select');
                 select.className = 'form-select';
                 select.name = csvCol;
                 select.id = `match_${index}`;
-                
+
                 let autoMatch = '';
                 const csvLower = csvCol.toLowerCase().replace(/[^a-z0-9]/g, '_');
                 if (csvLower.includes('trip') && csvLower.includes('name')) autoMatch = 'trip_name';
@@ -360,7 +358,7 @@
                     }
                     select.appendChild(option);
                 });
-                
+
                 row.appendChild(label);
                 row.appendChild(select);
                 container.appendChild(row);
@@ -369,27 +367,27 @@
             // Add Action dropdown at the end
             const actionRow = document.createElement('div');
             actionRow.className = 'mb-3';
-            
+
             const actionLabel = document.createElement('label');
             actionLabel.className = 'form-label';
             actionLabel.textContent = 'Action';
-            
+
             const actionSelect = document.createElement('select');
             actionSelect.className = 'form-select';
             actionSelect.name = 'importMode';
             actionSelect.id = 'importMode';
             actionSelect.required = true;
-            
+
             const addOption = document.createElement('option');
             addOption.value = 'add';
             addOption.textContent = 'Add New Trips';
             actionSelect.appendChild(addOption);
-            
+
             const updateOption = document.createElement('option');
             updateOption.value = 'update';
             updateOption.textContent = 'Update Existing Trips';
             actionSelect.appendChild(updateOption);
-            
+
             actionRow.appendChild(actionLabel);
             actionRow.appendChild(actionSelect);
             container.appendChild(actionRow);
@@ -400,12 +398,12 @@
 
         document.getElementById('csvMatchingForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const formData = new FormData(this);
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Uploading...';
-            
+
             fetch(this.action, {
                 method: 'POST',
                 body: formData

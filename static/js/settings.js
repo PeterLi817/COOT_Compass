@@ -191,4 +191,54 @@ $(document).ready(function() {
         console.log('Admin filter checkbox changed');
         renderUsers();
     });
+
+    // Show Trips switch handling
+    const $showTripsSwitch = $('#showTripsSwitch');
+
+    if ($showTripsSwitch.length) {
+        // Initialize switch state from backend
+        fetch('/api/settings/show_trips')
+            .then(resp => resp.json())
+            .then(data => {
+                const isOn = !!data.show_trips_to_students;
+                $showTripsSwitch.prop('checked', isOn);
+                $showTripsSwitch.attr('aria-checked', !!isOn);
+            })
+            .catch(err => {
+                console.error('Error fetching show_trips setting:', err);
+            });
+
+        // Toggle handler
+        $showTripsSwitch.on('change', function() {
+            const checked = $(this).is(':checked');
+
+            if (!isManager) {
+                // Only managers may toggle in UI; revert and show modal
+                $(this).prop('checked', !checked);
+                $('#permissionDeniedModal').modal('show');
+                return;
+            }
+
+            fetch('/api/settings/toggle_show_trips', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ value: checked })
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (!data.success) {
+                    // Revert on failure
+                    $showTripsSwitch.prop('checked', !checked);
+                    alert('Failed to save setting');
+                    return;
+                }
+                $showTripsSwitch.attr('aria-checked', !!data.show_trips_to_students);
+            })
+            .catch(err => {
+                console.error('Error toggling show_trips setting:', err);
+                $showTripsSwitch.prop('checked', !checked);
+                alert('Network error saving setting');
+            });
+        });
+    }
 });

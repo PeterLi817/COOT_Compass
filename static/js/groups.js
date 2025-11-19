@@ -252,5 +252,132 @@ window.addEventListener('DOMContentLoaded', event => {
             searchInput.blur();
         }
     });
+
+    // API Integration - Initialize API client
+    setupAPIIntegration();
 });
+
+// API Integration Functions
+function setupAPIIntegration() {
+    // Test API connection when page loads
+    if (window.cootAPI) {
+        window.cootAPI.healthCheck().then(result => {
+            console.log('API Status:', result.message);
+        }).catch(error => {
+            console.warn('API not available:', error);
+        });
+    }
+
+    // Remove legacy confirm dialog and direct API call for sort button
+    const sortButton = document.querySelector('button[data-bs-target="#confirmSortStudentsModal"]');
+    // No custom click handler needed; let Bootstrap open the modal and handle via modal form
+
+    // Override move student form submission
+    const moveForm = document.querySelector('#moveStudentModal form');
+    if (moveForm) {
+        moveForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const studentId = document.getElementById('student_name').value;
+            const tripId = document.getElementById('new_trip_id').value;
+            
+            if (studentId && tripId) {
+                moveStudentWithAPI(studentId, tripId);
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('moveStudentModal'));
+                if (modal) modal.hide();
+            } else {
+                showMessage('Please select both a student and a trip.', 'error');
+            }
+        });
+    }
+
+    // Override swap students form submission
+    const swapForm = document.querySelector('#swapStudentsModal form');
+    if (swapForm) {
+        swapForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const student1Id = document.getElementById('student1_name').value;
+            const student2Id = document.getElementById('student2_name').value;
+            
+            if (student1Id && student2Id) {
+                if (student1Id === student2Id) {
+                    showMessage('Please select two different students.', 'error');
+                    return;
+                }
+                swapStudentsWithAPI(student1Id, student2Id);
+                // Close modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('swapStudentsModal'));
+                if (modal) modal.hide();
+            } else {
+                showMessage('Please select both students.', 'error');
+            }
+        });
+    }
+
+    // --- Custom Sort Criteria Logic ---
+    // Handler for the Sort Students modal (custom criteria)
+    const sortModal = document.getElementById('confirmSortStudentsModal');
+    if (sortModal) {
+        const sortForm = sortModal.querySelector('form');
+        if (sortForm) {
+            sortForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                // Collect custom sort criteria from the modal
+                const selects = sortForm.querySelectorAll('.sort-criteria-select');
+                const criteria = [];
+                const used = new Set();
+                selects.forEach((sel, idx) => {
+                    if (sel.value && !used.has(sel.value)) {
+                        criteria.push({
+                            type: sel.value,
+                            priority: idx + 1
+                        });
+                        used.add(sel.value);
+                    }
+                });
+                if (criteria.length < selects.length) {
+                    alert('Please select a unique sort criterion for each priority.');
+                    return;
+                }
+                // Use the global API client if available
+                if (window.cootAPI && window.cootAPI.sortStudents) {
+                    window.cootAPI.sortStudents(criteria)
+                        .then(data => {
+                            if (data.success) {
+                                window.location.reload();
+                            } else {
+                                alert('Sort failed: ' + (data.message || 'Unknown error'));
+                            }
+                        })
+                        .catch(err => {
+                            alert('Sort failed: ' + err.message);
+                        });
+                } else {
+                    // Fallback to direct fetch
+                    fetch('/api/sort-students', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': (document.querySelector('input[name=csrf_token]') || {}).value || ''
+                        },
+                        body: JSON.stringify({ criteria })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert('Sort failed: ' + (data.message || 'Unknown error'));
+                        }
+                    })
+                    .catch(err => {
+                        alert('Sort failed: ' + err.message);
+                    });
+                }
+            });
+        }
+    }
+}
 

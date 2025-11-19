@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, Response, send_file
-from models import Student, Trip, db, User
+from models import Student, Trip, db, User, AppSettings
 from flask_login import login_required, current_user
 import csv
 import io
@@ -39,7 +39,32 @@ def get_users():
 @main.route('/student_view')
 @student_required
 def student_view():
-    return render_template('student_view.html', current_user=current_user, now=datetime.now())
+    settings = AppSettings.get()
+    show_trips = settings.show_trips_to_students
+    return render_template('student_view.html', current_user=current_user, now=datetime.now(), show_trips=show_trips)
+
+@main.route('/api/settings/show_trips', methods=['GET'])
+@admin_required
+def api_get_show_trips():
+    settings = AppSettings.get()
+    # print(settings.show_trips_to_students)
+    return jsonify({'show_trips_to_students': settings.show_trips_to_students})
+
+
+@main.route('/api/settings/toggle_show_trips', methods=['POST'])
+@admin_required
+def api_toggle_show_trips():
+    data = request.get_json() or {}
+    value = data.get('value')
+
+    settings = AppSettings.get()
+    if value is None:
+        settings.show_trips_to_students = not settings.show_trips_to_students
+    else:
+        settings.show_trips_to_students = bool(value)
+
+    db.session.commit()
+    return jsonify({'success': True, 'show_trips_to_students': settings.show_trips_to_students})
 
 @main.route('/no_access')
 @login_required
@@ -167,7 +192,7 @@ def add_student():
     return redirect(url_for('main.first_years'))
 
 @main.route('/edit-student', methods=['POST'])
-@login_required
+@admin_required
 def edit_student():
     # Get the database primary key (id) from the hidden form field
     student_db_id = request.form.get('student_db_id')
@@ -329,7 +354,7 @@ def add_trip():
     return redirect(url_for('main.trips'))
 
 @main.route('/edit-trip', methods=['POST'])
-@login_required
+@admin_required
 def edit_trip():
     trip_id = request.form.get('trip_id')
 
@@ -498,15 +523,15 @@ def upload_csv():
     try:
         stream = io.StringIO(file.stream.read().decode("utf-8"))
         csv_input = csv.DictReader(stream)
-        
+
         # Normalize column names (case-insensitive, strip whitespace)
         def normalize_key(key):
             return key.strip().lower().replace(' ', '_').replace('-', '_') if key else ''
-        
+
         # Create a mapping of normalized column names to actual column names
         fieldnames = csv_input.fieldnames or []
         column_map = {normalize_key(fn): fn for fn in fieldnames}
-        
+
         def get_value(row, possible_keys):
             """Get value from row using possible normalized keys"""
             for key in possible_keys:
@@ -519,7 +544,7 @@ def upload_csv():
         added_count = 0
         updated_count = 0
         skipped_count = 0
-        
+
         for row in csv_input:
             # Try multiple possible column name variations
             student_id = get_value(row, ['student_id', 'Student ID', 'student id', 'ID'])
@@ -594,7 +619,7 @@ def upload_csv():
     return redirect(url_for('main.groups'))
 
 @main.route('/process_matched_csv', methods=['POST'])
-@login_required
+@admin_required
 def process_matched_csv():
     try:
         file = request.files.get("csv_file")
@@ -699,7 +724,7 @@ def process_matched_csv():
         return jsonify({"success": False, "message": str(e)}), 500
 
 @main.route('/export_csv')
-@login_required
+@admin_required
 def export_csv():
     output = io.StringIO()
     writer = csv.writer(output)
@@ -738,7 +763,7 @@ def export_csv():
     )
 
 @main.route('/export_pdf')
-@login_required
+@admin_required
 def export_pdf():
     try:
         pdf_buffer = io.BytesIO()
@@ -804,7 +829,7 @@ def export_pdf():
         return f"Error generating PDF: {str(e)}", 500
 
 @main.route('/process_matched_trips_csv', methods=['POST'])
-@login_required
+@admin_required
 def process_matched_trips_csv():
     try:
         file = request.files.get("csv_file")
@@ -871,7 +896,7 @@ def process_matched_trips_csv():
                         continue
                     if not mapped.get('capacity'):
                         mapped['capacity'] = 10  # Default capacity
-                    
+
                     new_trip = Trip(**mapped)
                     db.session.add(new_trip)
                     added += 1
@@ -899,7 +924,7 @@ def process_matched_trips_csv():
         return jsonify({"success": False, "message": str(e)}), 500
 
 @main.route('/download_sample_csv')
-@login_required
+@admin_required
 def download_sample_csv():
     output = io.StringIO()
     writer = csv.writer(output)
@@ -947,6 +972,20 @@ def sort_students_route():
         flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
 
     return redirect(url_for('main.groups'))
+
+@main.route('/api/sort-students', methods=['POST'])
+@admin_required
+def api_sort_students():
+    """API endpoint for AJAX custom sort criteria."""
+    try:
+        data = request.get_json(force=True)
+        criteria = data.get('criteria', [])
+        stats = sort_students(custom_criteria=criteria)
+        db.session.commit()
+        return jsonify({'success': True, 'stats': stats, 'message': 'Sorting completed.'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 @main.route('/update-user-role', methods=['POST'])
 @manager_required

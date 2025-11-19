@@ -3,6 +3,7 @@ from views import main
 from models import User, db
 from fill_db import add_fake_data #for development purposes
 from auth import auth_blueprint
+from api_routes import api
 from flask_login import LoginManager
 from auth import init_oauth
 import os
@@ -11,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 SECRET_KEY = os.getenv('SECRET_KEY')
+# print(SECRET_KEY)
 ENVIRONMENT = os.getenv('ENVIRONMENT')
 SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
 if ENVIRONMENT == 'production' and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
@@ -35,13 +37,14 @@ def load_user(email):
 
 app.register_blueprint(main)
 app.register_blueprint(auth_blueprint)
+app.register_blueprint(api)
 
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()  # Create database tables
         add_fake_data()
 
-    app.run(debug=True)
+    app.run(debug=True, port=5000)
 else:
     with app.app_context():
         db.create_all()  # Create database tables
