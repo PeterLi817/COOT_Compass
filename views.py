@@ -642,7 +642,17 @@ def process_matched_csv():
                         trip_type = value
                         continue
                     elif db_field in valid_fields:
-                        mapped[db_field] = value if value else None
+                        # Handle boolean fields
+                        if db_field in ['poc', 'fli_international']:
+                            if value:
+                                mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
+                            else:
+                                mapped[db_field] = False
+                        # Handle integer fields
+                        elif db_field in ['water_comfort', 'tent_comfort']:
+                            mapped[db_field] = int(value) if value and value.isdigit() else None
+                        else:
+                            mapped[db_field] = value if value else None
 
                 student_id = mapped.get("student_id")
                 if not student_id:
