@@ -147,34 +147,54 @@ class COOTSorter:
                     self.stats['no_preference'] += 1
     
     def _can_place_student_in_trip(self, student, trip):
-        """Check if student can be placed in trip without violating constraints."""
+        """Check if student can be placed in trip without violating constraints, using custom criteria order if provided."""
         tracker = self.trip_trackers[trip.id]
 
-        # Capacity check
+        # Always check capacity first
         if tracker['capacity_left'] <= 0:
             return False
 
-        # Water comfort constraint
+        # Build a map of constraint checkers
+        constraint_checkers = {
+            'dorm': lambda: not (student.dorm and student.dorm in tracker['dorms']),
+            'sports_team': lambda: not (
+                student.athletic_team and
+                student.athletic_team.lower() not in ['n/a', 'none', '', 'null'] and
+                student.athletic_team in tracker['teams']
+            ),
+            'gender': lambda: self._check_gender_balance(student, trip),
+            'trip_preference': lambda: True,  # trip preference is handled in batch logic, not as a constraint
+        }
+        # Always check water/tent comfort as hard constraints
         if trip.water and student.water_comfort and int(student.water_comfort) <= 2:
             return False
-
-        # Tent comfort constraint
         if trip.tent and student.tent_comfort and int(student.tent_comfort) <= 2:
             return False
 
-        # Roommate constraint (no students from same dorm)
-        if student.dorm and student.dorm in tracker['dorms']:
-            return False
+        # LOG: Show the custom criteria being used for this sort (remove after debugging)
+        if self.custom_criteria:
+            print(f"[COOTSorter] Using custom criteria order: {[c['type'] for c in self.custom_criteria]}")
 
-        # Teammate constraint (no students from same athletic team)
-        if (student.athletic_team and
-            student.athletic_team.lower() not in ['n/a', 'none', '', 'null'] and
-            student.athletic_team in tracker['teams']):
-            return False
-
-        if not self._check_gender_balance(student, trip):
-            return False
-
+        # If custom_criteria is set, use its order for constraints
+        if self.custom_criteria:
+            for crit in self.custom_criteria:
+                checker = constraint_checkers.get(crit['type'])
+                # LOG: Show which constraint is being checked for this student/trip (remove after debugging)
+                if checker:
+                    result = checker()
+                    print(f"[COOTSorter] Checking {crit['type']} for student {getattr(student, 'student_id', None)} in trip {getattr(trip, 'id', None)}: {'PASS' if result else 'FAIL'}")
+                    if not result:
+                        return False
+        else:
+            # Default: check all constraints in legacy order
+            if student.dorm and student.dorm in tracker['dorms']:
+                return False
+            if (student.athletic_team and
+                student.athletic_team.lower() not in ['n/a', 'none', '', 'null'] and
+                student.athletic_team in tracker['teams']):
+                return False
+            if not self._check_gender_balance(student, trip):
+                return False
         return True
 
     def _check_gender_balance(self, student, trip):
