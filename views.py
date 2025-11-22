@@ -992,9 +992,20 @@ def api_sort_students():
         criteria = data.get('criteria', [])
         stats = sort_students(custom_criteria=criteria)
         db.session.commit()
+        if stats.get('all_valid', False):
+            flash(f'🎯 Sorting completed in {stats["attempts"]} attempt(s)! '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice, '
+                f'{stats["assignment_rate"]:.1f}% total placement rate. '
+                f'All trips are valid! ✓', 'success')
+        else:
+            flash(f'⚠️ Sorting completed after {stats["attempts"]} attempts, but some trips may still be invalid. '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice.', 'warning')
         return jsonify({'success': True, 'stats': stats, 'message': 'Sorting completed.'})
     except Exception as e:
         db.session.rollback()
+        flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
         return jsonify({'success': False, 'message': str(e)}), 400
 
 @main.route('/update-user-role', methods=['POST'])
