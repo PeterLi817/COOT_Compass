@@ -667,23 +667,41 @@ def process_matched_csv():
                         trip_type = value
                         continue
                     elif db_field in valid_fields:
-                        # Handle boolean fields
+                        # Handle boolean fields (nullable)
                         if db_field in ['poc', 'fli_international']:
                             if value:
                                 mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
                             else:
-                                mapped[db_field] = False
-                        # Handle integer fields
+                                mapped[db_field] = None
+                        # Handle integer fields (nullable)
                         elif db_field in ['water_comfort', 'tent_comfort']:
-                            mapped[db_field] = int(value) if value and value.isdigit() else None
+                            if value and value.isdigit():
+                                mapped[db_field] = int(value)
+                            else:
+                                mapped[db_field] = None
                         else:
                             mapped[db_field] = value if value else None
 
                 student_id = mapped.get("student_id")
                 if not student_id:
-                    errors.append(f"Row {idx}: Missing student_id")
+                    errors.append(f"Row {idx}: Missing student_id (required)")
                     skipped += 1
                     continue
+
+                # Validate required fields for new students
+                if import_mode != "update":
+                    if not mapped.get('first_name'):
+                        errors.append(f"Row {idx}: Missing first_name (required)")
+                        skipped += 1
+                        continue
+                    if not mapped.get('last_name'):
+                        errors.append(f"Row {idx}: Missing last_name (required)")
+                        skipped += 1
+                        continue
+                    if not mapped.get('email'):
+                        errors.append(f"Row {idx}: Missing email (required)")
+                        skipped += 1
+                        continue
 
                 if trip_name:
                     trip = Trip.query.filter_by(trip_name=trip_name).first()
@@ -1019,11 +1037,15 @@ def process_matched_trips_csv():
 
                     if db_field in valid_fields:
                         if db_field in ['water', 'tent']:
-                            # Handle boolean fields
-                            mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
+                            # Handle boolean fields with defaults
+                            if value:
+                                mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
+                            # If empty, don't set it - let the model default handle it
                         elif db_field == 'capacity':
-                            # Handle integer field
-                            mapped[db_field] = int(value) if value and value.isdigit() else None
+                            # Handle integer field (required, non-nullable)
+                            if value and value.isdigit():
+                                mapped[db_field] = int(value)
+                            # Don't set to None - will be validated or defaulted later
                         else:
                             mapped[db_field] = value if value else None
 
@@ -1047,7 +1069,9 @@ def process_matched_trips_csv():
                         skipped += 1
                         continue
                     if not mapped.get('capacity'):
-                        mapped['capacity'] = 10  # Default capacity
+                        errors.append(f"Row {idx}: Missing or invalid capacity (required)")
+                        skipped += 1
+                        continue
 
                     new_trip = Trip(**mapped)
                     db.session.add(new_trip)
