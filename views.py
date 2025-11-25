@@ -667,23 +667,41 @@ def process_matched_csv():
                         trip_type = value
                         continue
                     elif db_field in valid_fields:
-                        # Handle boolean fields
+                        # Handle boolean fields (nullable)
                         if db_field in ['poc', 'fli_international']:
                             if value:
                                 mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
                             else:
-                                mapped[db_field] = False
-                        # Handle integer fields
+                                mapped[db_field] = None
+                        # Handle integer fields (nullable)
                         elif db_field in ['water_comfort', 'tent_comfort']:
-                            mapped[db_field] = int(value) if value and value.isdigit() else None
+                            if value and value.isdigit():
+                                mapped[db_field] = int(value)
+                            else:
+                                mapped[db_field] = None
                         else:
                             mapped[db_field] = value if value else None
 
                 student_id = mapped.get("student_id")
                 if not student_id:
-                    errors.append(f"Row {idx}: Missing student_id")
+                    errors.append(f"Row {idx}: Missing student_id (required)")
                     skipped += 1
                     continue
+
+                # Validate required fields for new students
+                if import_mode != "update":
+                    if not mapped.get('first_name'):
+                        errors.append(f"Row {idx}: Missing first_name (required)")
+                        skipped += 1
+                        continue
+                    if not mapped.get('last_name'):
+                        errors.append(f"Row {idx}: Missing last_name (required)")
+                        skipped += 1
+                        continue
+                    if not mapped.get('email'):
+                        errors.append(f"Row {idx}: Missing email (required)")
+                        skipped += 1
+                        continue
 
                 if trip_name:
                     trip = Trip.query.filter_by(trip_name=trip_name).first()
@@ -740,28 +758,44 @@ def export_csv():
     writer = csv.writer(output)
 
     writer.writerow([
-        'Trip Name', 'Trip Type', 'Student ID', 'First Name', 'Last Name',
-        'Gender', 'Athletic Team', 'Dorm', 'Hometown'
+        'Student ID', 'First Name', 'Last Name', 'Email', 'Gender',
+        'Athletic Team', 'Dorm', 'Hometown', 'Water Comfort', 'Tent Comfort',
+        'Trip Pref 1', 'Trip Pref 2', 'Trip Pref 3', 'POC', 'FLI/International',
+        'Notes', 'Trip Name', 'Trip Type', 'User Email'
     ])
 
-    trips = sorted(
-        Trip.query.all(),
-        key=lambda t: int(''.join(filter(str.isdigit, t.trip_name)) or 0)
-    )
+    students = Student.query.all()
 
-    for trip in trips:
-        for student in trip.students:
-            writer.writerow([
-                trip.trip_name,
-                trip.trip_type,
-                student.student_id,
-                student.first_name,
-                student.last_name,
-                student.gender or '',
-                student.athletic_team or '',
-                student.dorm or '',
-                student.hometown or ''
-            ])
+    for student in students:
+        trip_name = ''
+        trip_type = ''
+        if student.trip_id:
+            trip = Trip.query.get(student.trip_id)
+            if trip:
+                trip_name = trip.trip_name
+                trip_type = trip.trip_type
+
+        writer.writerow([
+            student.student_id,
+            student.first_name,
+            student.last_name,
+            student.email,
+            student.gender or '',
+            student.athletic_team or '',
+            student.dorm or '',
+            student.hometown or '',
+            student.water_comfort or '',
+            student.tent_comfort or '',
+            student.trip_pref_1 or '',
+            student.trip_pref_2 or '',
+            student.trip_pref_3 or '',
+            student.poc if student.poc is not None else '',
+            student.fli_international if student.fli_international is not None else '',
+            student.notes or '',
+            trip_name,
+            trip_type,
+            student.user_email or ''
+        ])
 
     output.seek(0)
     filename = f"trip_rosters_{datetime.now().strftime('%b-%d-%Y_%I-%M%p')}.csv"
@@ -771,6 +805,38 @@ def export_csv():
         mimetype='text/csv',
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+@main.route('/export_trip_csv')
+@admin_required
+def export_trip_csv():
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    writer.writerow([
+        'Trip Name', 'Trip Type', 'Capacity', 'Address', 'Water', 'Tent'
+    ])
+
+    trips = Trip.query.all()
+
+    for trip in trips:
+        writer.writerow([
+            trip.trip_name,
+            trip.trip_type,
+            trip.capacity,
+            trip.address or '',
+            trip.water if trip.water is not None else '',
+            trip.tent if trip.tent is not None else ''
+        ])
+
+    output.seek(0)
+    filename = f"trips_{datetime.now().strftime('%b-%d-%Y_%I-%M%p')}.csv"
+
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
 
 @main.route('/export_pdf')
 @admin_required
@@ -791,38 +857,132 @@ def export_pdf():
                 p.showPage()
             first_page = False
 
-            y = height - 80
+            y = height - 60
 
-            p.setFont("Helvetica-Bold", 16)
-            p.drawString(150, height - 50, "Trip Roster")
+            # Header with border
+            p.setLineWidth(2)
+            p.rect(40, y - 5, width - 80, 30, fill=False, stroke=True)
 
-            p.setFont("Helvetica-Bold", 12)
-            p.drawString(50, y, f"Trip: {trip.trip_name} ({trip.trip_type})")
-            y -= 20
+            p.setFont("Helvetica-Bold", 18)
+            p.drawString(50, y + 5, f"{trip.trip_name}")
 
-            p.setFont("Helvetica", 10)
-            p.drawString(70, y, f"Capacity: {len(trip.students)}/{trip.capacity}")
-            y -= 20
+            p.setFont("Helvetica", 12)
+            p.drawString(width - 200, y + 5, f"{trip.trip_type}")
 
+            y -= 40
+
+            # Trip details box
             p.setFont("Helvetica-Bold", 11)
-            p.drawString(70, y, "Students:")
+            p.drawString(50, y, "Trip Information")
             y -= 15
 
             p.setFont("Helvetica", 10)
+            p.drawString(50, y, f"• Capacity: {len(trip.students)}/{trip.capacity} students")
+            y -= 15
 
-            for student in trip.students:
-                line = (
-                    f"- {student.first_name} {student.last_name}, "
-                    f"{student.gender or ''}, "
-                    f"{student.athletic_team or ''}, "
-                    f"{student.dorm or ''}"
-                )
-                p.drawString(90, y, line)
+            if trip.address:
+                # Clean address - remove newlines and special characters that don't render in PDF
+                clean_address = trip.address.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+                # Remove multiple spaces
+                clean_address = ' '.join(clean_address.split())
+                p.drawString(50, y, f"• Location: {clean_address}")
                 y -= 15
 
-                if y < 80:
-                    p.showPage()
-                    y = height - 80
+            features = []
+            if trip.water:
+                features.append("Water Activity")
+            if trip.tent:
+                features.append("Tent Camping")
+            if features:
+                p.drawString(50, y, f"• Features: {', '.join(features)}")
+                y -= 15
+
+            y -= 10
+
+            # Students section header
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(50, y, "Student Roster")
+            y -= 5
+
+            # Draw line separator
+            p.setLineWidth(1.5)
+            p.line(40, y, width - 40, y)
+            y -= 15
+
+            if not trip.students:
+                p.setFont("Helvetica-Oblique", 10)
+                p.drawString(50, y, "No students assigned yet")
+                y -= 20
+            else:
+                # Table header
+                p.setFont("Helvetica-Bold", 9)
+                p.drawString(50, y, "Name")
+                p.drawString(200, y, "Gender")
+                p.drawString(280, y, "Dorm")
+                p.drawString(380, y, "Athletic Team")
+                y -= 3
+
+                # Header underline
+                p.setLineWidth(0.5)
+                p.line(40, y, width - 40, y)
+                y -= 12
+
+                p.setFont("Helvetica", 9)
+
+                for idx, student in enumerate(trip.students, 1):
+                    # Check if we need a new page
+                    if y < 100:
+                        p.showPage()
+                        y = height - 60
+                        # Redraw table header on new page
+                        p.setFont("Helvetica-Bold", 9)
+                        p.drawString(50, y, "Name")
+                        p.drawString(200, y, "Gender")
+                        p.drawString(280, y, "Dorm")
+                        p.drawString(380, y, "Athletic Team")
+                        y -= 3
+                        p.setLineWidth(0.5)
+                        p.line(40, y, width - 40, y)
+                        y -= 15
+                        p.setFont("Helvetica", 9)
+
+                    # Add padding above each row (except first)
+                    if idx > 1:
+                        y -= 10
+
+                    # Student data
+                    full_name = f"{student.first_name} {student.last_name}"
+                    # Truncate name if too long
+                    if len(full_name) > 20:
+                        full_name = full_name[:17] + "..."
+                    p.drawString(50, y, full_name)
+
+                    gender = student.gender or "-"
+                    p.drawString(200, y, gender)
+
+                    dorm = student.dorm or "-"
+                    if len(dorm) > 12:
+                        dorm = dorm[:9] + "..."
+                    p.drawString(280, y, dorm)
+
+                    team = student.athletic_team or "-"
+                    if team.lower() in ['n/a', 'none', '']:
+                        team = "-"
+                    if len(team) > 20:
+                        team = team[:17] + "..."
+                    p.drawString(380, y, team)
+
+                    y -= 12
+
+                    # Draw line between students
+                    p.setLineWidth(0.3)
+                    p.line(40, y, width - 40, y)
+                    y -= 2
+
+            # Footer with page info
+            y = 50
+            p.setFont("Helvetica", 8)
+            p.drawString(50, y, f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}")
 
         p.save()
         pdf_buffer.seek(0)
@@ -877,11 +1037,15 @@ def process_matched_trips_csv():
 
                     if db_field in valid_fields:
                         if db_field in ['water', 'tent']:
-                            # Handle boolean fields
-                            mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
+                            # Handle boolean fields with defaults
+                            if value:
+                                mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
+                            # If empty, don't set it - let the model default handle it
                         elif db_field == 'capacity':
-                            # Handle integer field
-                            mapped[db_field] = int(value) if value and value.isdigit() else None
+                            # Handle integer field (required, non-nullable)
+                            if value and value.isdigit():
+                                mapped[db_field] = int(value)
+                            # Don't set to None - will be validated or defaulted later
                         else:
                             mapped[db_field] = value if value else None
 
@@ -905,7 +1069,9 @@ def process_matched_trips_csv():
                         skipped += 1
                         continue
                     if not mapped.get('capacity'):
-                        mapped['capacity'] = 10  # Default capacity
+                        errors.append(f"Row {idx}: Missing or invalid capacity (required)")
+                        skipped += 1
+                        continue
 
                     new_trip = Trip(**mapped)
                     db.session.add(new_trip)
@@ -992,9 +1158,20 @@ def api_sort_students():
         criteria = data.get('criteria', [])
         stats = sort_students(custom_criteria=criteria)
         db.session.commit()
+        if stats.get('all_valid', False):
+            flash(f'🎯 Sorting completed in {stats["attempts"]} attempt(s)! '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice, '
+                f'{stats["assignment_rate"]:.1f}% total placement rate. '
+                f'All trips are valid! ✓', 'success')
+        else:
+            flash(f'⚠️ Sorting completed after {stats["attempts"]} attempts, but some trips may still be invalid. '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice.', 'warning')
         return jsonify({'success': True, 'stats': stats, 'message': 'Sorting completed.'})
     except Exception as e:
         db.session.rollback()
+        flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
         return jsonify({'success': False, 'message': str(e)}), 400
 
 @main.route('/update-user-role', methods=['POST'])

@@ -192,32 +192,40 @@ $(document).ready(function() {
         renderUsers();
     });
 
+    // Handle Toggle Trip Visibility button click
+    $('#toggleTripsVisibilityBtn').on('click', function(e) {
+        e.preventDefault();
+
+        if (!isManager) {
+            // Show permission denied modal
+            $('#permissionDeniedModal').modal('show');
+        } else {
+            // Show the toggle trips visibility modal
+            $('#toggleTripsVisibilityModal').modal('show');
+        }
+    });
+
     // Show Trips switch handling
     const $showTripsSwitch = $('#showTripsSwitch');
 
     if ($showTripsSwitch.length) {
-        // Initialize switch state from backend
-        fetch('/api/settings/show_trips')
-            .then(resp => resp.json())
-            .then(data => {
-                const isOn = !!data.show_trips_to_students;
-                $showTripsSwitch.prop('checked', isOn);
-                $showTripsSwitch.attr('aria-checked', !!isOn);
-            })
-            .catch(err => {
-                console.error('Error fetching show_trips setting:', err);
-            });
+        // Initialize switch state from backend when modal is shown
+        $('#toggleTripsVisibilityModal').on('show.bs.modal', function() {
+            fetch('/api/settings/show_trips')
+                .then(resp => resp.json())
+                .then(data => {
+                    const isOn = !!data.show_trips_to_students;
+                    $showTripsSwitch.prop('checked', isOn);
+                    $showTripsSwitch.attr('aria-checked', !!isOn);
+                })
+                .catch(err => {
+                    console.error('Error fetching show_trips setting:', err);
+                });
+        });
 
         // Toggle handler
         $showTripsSwitch.on('change', function() {
             const checked = $(this).is(':checked');
-
-            if (!isManager) {
-                // Only managers may toggle in UI; revert and show modal
-                $(this).prop('checked', !checked);
-                $('#permissionDeniedModal').modal('show');
-                return;
-            }
 
             fetch('/api/settings/toggle_show_trips', {
                 method: 'POST',
