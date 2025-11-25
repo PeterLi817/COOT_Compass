@@ -317,14 +317,14 @@ class COOTSorter:
             self.stats['first_choice_rate'] = 0
 
 
-def sort_students(custom_criteria=None):
-    """
-    Main entry point for sorting students.
-    Returns statistics about the sorting process.
-    Accepts optional custom_criteria for sorting priorities.
-    """
-    sorter = COOTSorter(custom_criteria=custom_criteria)
-    return sorter.sort_all_students()
+# def sort_students(custom_criteria=None):
+#     """
+#     Main entry point for sorting students.
+#     Returns statistics about the sorting process.
+#     Accepts optional custom_criteria for sorting priorities.
+#     """
+#     sorter = COOTSorter(custom_criteria=custom_criteria)
+#     return sorter.sort_all_students()
 
 
 def sort_students(custom_criteria=None):
@@ -373,6 +373,9 @@ def sort_students(custom_criteria=None):
             student.trip_id = None
 
     # Max attempts reached, return the last result
+    sorter = COOTSorter(custom_criteria=custom_criteria)
+    stats = sorter.sort_all_students()
     stats['attempts'] = max_attempts
     stats['all_valid'] = False
+    print(stats)
     return stats
