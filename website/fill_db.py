@@ -1,4 +1,5 @@
-from models import db, User, Student, Trip
+from website import db
+from .models import User, Student, Trip
 import random
 from faker import Faker
 

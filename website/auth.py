@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask import request, session
-from models import db, User, Student
+from website import db
+from .models import User, Student
 from flask_login import login_user, login_required, logout_user, current_user
 from authlib.integrations.flask_client import OAuth
 import os

@@ -1,9 +1,9 @@
 from flask import Blueprint, jsonify, request
-from models import Student, Trip, db
-from sort import sort_students
+from website import db
+from .models import Student, Trip
+from .sort import sort_students
 from flask_login import login_required
-from static.utils.decorators import manager_required, admin_required, student_required
-import traceback
+from .static.utils.decorators import manager_required, admin_required, student_required
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
