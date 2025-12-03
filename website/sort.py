@@ -1,4 +1,5 @@
-from models import Student, Trip, db
+from website import db
+from .models import Student, Trip
 from collections import defaultdict
 import random
 

@@ -1,11 +1,12 @@
+from website import db
 from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, Response, send_file
-from models import Student, Trip, db, User, AppSettings
+from .models import Student, Trip, db, User, AppSettings
 from flask_login import login_required, current_user
 import csv
 import io
-from sort import sort_students
+from .sort import sort_students
 import json
-from static.utils.decorators import manager_required, admin_required, student_required
+from .static.utils.decorators import manager_required, admin_required, student_required
 from datetime import datetime
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
