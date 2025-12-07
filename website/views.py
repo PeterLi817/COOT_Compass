@@ -121,7 +121,8 @@ def first_years():
             'gender': student.gender or '',
             'water_comfort': str(student.water_comfort) if student.water_comfort is not None else '',
             'tent_comfort': str(student.tent_comfort) if student.tent_comfort is not None else '',
-            'trip_id': student.trip_id
+            'trip_id': student.trip_id,
+            'allergies_dietary_restrictions': student.allergies_dietary_restrictions or ''
         }
 
     return render_template('first-years.html', students=students, trips=trips, unique_trip_types=unique_trip_types, students_data_json=json.dumps(students_data))
@@ -177,6 +178,7 @@ def add_student():
             hometown=request.form.get('hometown'),
             poc=poc,
             fli_international=fli_international,
+            allergies_dietary_restrictions=request.form.get('allergies_dietary_restrictions'),
             trip_id=request.form.get('assigned-trip') or None
         )
 
@@ -254,6 +256,7 @@ def edit_student():
     student.notes = request.form.get('notes') or None
     student.poc = request.form.get('poc') == 'true'
     student.fli_international = request.form.get('fli_international') == 'true'
+    student.allergies_dietary_restrictions = request.form.get('allergies_dietary_restrictions') or None
 
     # Handle trip assignment
     assigned_trip = request.form.get('assigned-trip')
@@ -558,6 +561,7 @@ def upload_csv():
             dorm = get_value(row, ['dorm', 'Dorm', 'DORM', 'residence', 'Residence'])
             water_comfort = get_value(row, ['water_comfort', 'Water Comfort', 'water comfort', 'water'])
             tent_comfort = get_value(row, ['tent_comfort', 'Tent Comfort', 'tent comfort', 'tent'])
+            allergies_dietary_restrictions = get_value(row, ['allergies_dietary_restrictions', 'Allergies & Dietary Restrictions', 'allergies', 'Allergies', 'dietary restrictions', 'Dietary Restrictions'])
             trip_name = get_value(row, ['trip_name', 'Trip Name', 'trip name', 'Trip', 'trip'])
             trip_type = get_value(row, ['trip_type', 'Trip Type', 'trip type', 'Type', 'type'])
 
@@ -593,6 +597,7 @@ def upload_csv():
                     water_comfort=water_comfort if water_comfort else None,
                     tent_comfort=tent_comfort if tent_comfort else None,
                     email=email,
+                    allergies_dietary_restrictions=allergies_dietary_restrictions if allergies_dietary_restrictions else None,
                     trip_id=trip.id if trip else None
                 )
                 db.session.add(student)
@@ -607,6 +612,7 @@ def upload_csv():
                 student.water_comfort = water_comfort if water_comfort else None
                 student.tent_comfort = tent_comfort if tent_comfort else None
                 student.email = email
+                student.allergies_dietary_restrictions = allergies_dietary_restrictions if allergies_dietary_restrictions else None
                 student.trip_id = trip.id if trip else None
                 updated_count += 1
 
@@ -646,6 +652,7 @@ def process_matched_csv():
             'student_id', 'first_name', 'last_name', 'email', 'trip_id',
             'trip_pref_1', 'trip_pref_2', 'trip_pref_3', 'dorm',
             'athletic_team', 'gender', 'notes', 'water_comfort',
+            'allergies_dietary_restrictions',
             'tent_comfort', 'hometown', 'poc', 'fli_international'
         }
 
