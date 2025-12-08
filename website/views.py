@@ -852,13 +852,13 @@ def sort_students_route():
     try:
         stats = sort_students()
         db.session.commit()
-        flash(f'🎯 Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
+        flash(f'Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
               f'{stats["first_choice_rate"]:.1f}% got first choice, '
               f'{stats["assignment_rate"]:.1f}% total placement rate.', 'success')
 
     except Exception as e:
         db.session.rollback()
-        flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
+        flash(f'Sorting failed: {str(e)}', 'danger')
 
     return redirect(url_for('main.groups'))
 

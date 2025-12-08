@@ -5,6 +5,7 @@ from website import db
 from .models import AppSettings, Student, Trip, User
 from flask_login import login_required, current_user
 from .static.utils.decorators import manager_required, admin_required, student_required
+from .sort import sort_students
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -463,3 +464,29 @@ def update_user_role():
         db.session.rollback()
         flash(f'Error updating user role: {str(e)}', 'danger')
         return jsonify({'success': False}), 500
+
+# Sort students
+@api.route('/sort-students', methods=['POST'])
+@admin_required
+def sort_students_api():
+    try:
+        data = request.get_json(silent=True) or {}
+        criteria = data.get('criteria')
+        if criteria:
+            stats = sort_students(custom_criteria=criteria)
+        else:
+            stats = sort_students()
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': 'Sorting completed.',
+            'stats': stats
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'message': str(e)
+        }), 400

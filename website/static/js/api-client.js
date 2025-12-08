@@ -17,11 +17,11 @@ class COOTAPI {
         try {
             const response = await fetch(url, config);
             const data = await response.json();
-            
+
             if (!response.ok) {
-                throw new Error(data.error || `HTTP ${response.status}`);
+                throw new Error(data.error || data.message || `HTTP ${response.status}`);
             }
-            
+
             return data;
         } catch (error) {
             console.error('API Error:', error);
@@ -83,13 +83,13 @@ function showMessage(message, type = 'success') {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     `;
-    
+
     // Insert after the main title
     const title = document.querySelector('h1');
     if (title) {
         title.insertAdjacentHTML('afterend', alertHTML);
     }
-    
+
     // Auto-remove after 3 seconds
     setTimeout(() => {
         const alert = document.querySelector('.alert');
@@ -102,10 +102,10 @@ async function sortStudentsWithAPI() {
     try {
         const result = await window.cootAPI.sortStudents();
         showMessage(result.message);
-        
+
         // Dynamically refresh the groups display
         await refreshGroupsDisplay();
-        
+
     } catch (error) {
         showMessage(`Sort failed: ${error.message}`, 'error');
     }
@@ -115,10 +115,10 @@ async function moveStudentWithAPI(studentId, newTripId) {
     try {
         const result = await window.cootAPI.moveStudent(studentId, newTripId);
         showMessage(result.message);
-        
+
         // Dynamically refresh the groups display
         await refreshGroupsDisplay();
-        
+
     } catch (error) {
         showMessage(`Move failed: ${error.message}`, 'error');
     }
@@ -128,10 +128,10 @@ async function swapStudentsWithAPI(student1Id, student2Id) {
     try {
         const result = await window.cootAPI.swapStudents(student1Id, student2Id);
         showMessage(result.message);
-        
+
         // Dynamically refresh the groups display
         await refreshGroupsDisplay();
-        
+
     } catch (error) {
         showMessage(`Swap failed: ${error.message}`, 'error');
     }
@@ -145,20 +145,20 @@ async function refreshGroupsDisplay() {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         });
-        
+
         if (response.ok) {
             const html = await response.text();
             const parser = new DOMParser();
             const newDoc = parser.parseFromString(html, 'text/html');
-            
+
             // Find the groups list container
             const newGroupsList = newDoc.querySelector('.groups-list');
             const currentGroupsList = document.querySelector('.groups-list');
-            
+
             if (newGroupsList && currentGroupsList) {
                 // Replace the content but preserve event listeners by re-initializing
                 currentGroupsList.innerHTML = newGroupsList.innerHTML;
-                
+
                 // Re-initialize any JavaScript functionality for the new content
                 reinitializeGroupsEventListeners();
             }
@@ -190,7 +190,7 @@ function reinitializeGroupsEventListeners() {
             }
         }
     });
-    
+
     // Re-apply any other event listeners that might be needed
     // This would include move/swap form handlers if they're not already set up globally
 }
