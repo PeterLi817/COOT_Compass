@@ -871,8 +871,7 @@ def clear_databases():
         num_trips = Trip.query.delete()
 
         # Delete users with role 'student' or None
-        from models import User
-        num_users = User.query.filter((User.role == 'student') | (User.role == None)).delete(synchronize_session=False)
+        num_users = User.query.filter((User.role == 'student') | (User.role.is_(None))).delete(synchronize_session=False)
 
         db.session.commit()
         flash(f'🗑️ Cleared databases: {num_students} students, {num_trips} trips, and {num_users} users removed.', 'success')

@@ -135,7 +135,21 @@ $(document).ready(function() {
     $('#confirmClearDB').on('click', function() {
         const inputValue = $('#confirmTextInput').val();
         if (inputValue.toUpperCase() === 'CONFIRM') {
-            fetch(`clear-databases`, { method: 'POST' });
+            fetch(`/clear-databases`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error clearing databases. Check console for details.');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('Error clearing databases.');
+            });
             $('#confirmClearDBModal').modal('hide');
         }
     });
