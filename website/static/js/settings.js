@@ -74,7 +74,7 @@ $(document).ready(function() {
             $('#viewUsersModal').modal('show');
 
             // Fetch users from the backend
-            fetch('/get-users')
+            fetch('/api/get-users')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Failed to fetch users');
@@ -165,7 +165,7 @@ $(document).ready(function() {
         const newRole = $('#roleSelect').val();
 
         // Send update request to backend
-        fetch('/update-user-role', {
+        fetch('/api/update-user-role', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
