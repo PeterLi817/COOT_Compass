@@ -769,7 +769,7 @@ def export_csv():
         'Student ID', 'First Name', 'Last Name', 'Email', 'Gender',
         'Athletic Team', 'Dorm', 'Hometown', 'Water Comfort', 'Tent Comfort',
         'Trip Pref 1', 'Trip Pref 2', 'Trip Pref 3', 'POC', 'FLI/International',
-        'Notes', 'Trip Name', 'Trip Type', 'User Email'
+        'Notes', 'Allergies & Dietary Restrictions', 'Trip Name', 'Trip Type', 'User Email'
     ])
 
     students = Student.query.all()
@@ -800,6 +800,7 @@ def export_csv():
             student.poc if student.poc is not None else '',
             student.fli_international if student.fli_international is not None else '',
             student.notes or '',
+            student.allergies_dietary_restrictions or '',
             trip_name,
             trip_type,
             student.user_email or ''
@@ -1116,12 +1117,12 @@ def download_sample_csv():
     writer.writerow([
         'student_id', 'first_name', 'last_name', 'email', 'gender',
         'athletic_team', 'dorm', 'hometown',
-        'water_comfort', 'tent_comfort', 'trip_name', 'trip_type'
+        'water_comfort', 'tent_comfort', 'trip_name', 'trip_type', 'allergies_dietary_restrictions'
     ])
 
     sample_data = [
-        ['S001', 'John', 'Smith', 'john.smith@colby.edu', 'Male', 'Soccer', 'Dana', 'Portland ME', '4', '5', 'Trip 1', 'backpacking'],
-        ['S002', 'Jane', 'Doe', 'jane.doe@colby.edu', 'Female', 'Swimming', 'West', 'Boston MA', '5', '4', 'Trip 2', 'canoeing']
+        ['S001', 'John', 'Smith', 'john.smith@colby.edu', 'Male', 'Soccer', 'Dana', 'Portland ME', '4', '5', 'Trip 1', 'backpacking', 'Peanut allergy'],
+        ['S002', 'Jane', 'Doe', 'jane.doe@colby.edu', 'Female', 'Swimming', 'West', 'Boston MA', '5', '4', 'Trip 2', 'canoeing', 'Vegetarian']
     ]
 
     for row in sample_data:
