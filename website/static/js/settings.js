@@ -74,7 +74,7 @@ $(document).ready(function() {
             $('#viewUsersModal').modal('show');
 
             // Fetch users from the backend
-            fetch('/get-users')
+            fetch('/api/get-users')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Failed to fetch users');
@@ -135,7 +135,21 @@ $(document).ready(function() {
     $('#confirmClearDB').on('click', function() {
         const inputValue = $('#confirmTextInput').val();
         if (inputValue.toUpperCase() === 'CONFIRM') {
-            fetch(`clear-databases`, { method: 'POST' });
+            fetch(`/clear-databases`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error clearing databases. Check console for details.');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('Error clearing databases.');
+            });
             $('#confirmClearDBModal').modal('hide');
         }
     });
@@ -165,7 +179,7 @@ $(document).ready(function() {
         const newRole = $('#roleSelect').val();
 
         // Send update request to backend
-        fetch('/update-user-role', {
+        fetch('/api/update-user-role', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

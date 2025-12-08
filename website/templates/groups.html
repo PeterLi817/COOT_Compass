@@ -410,7 +410,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <form action="{{ url_for('main.move_student') }}" method="POST">
+                <form action="{{ url_for('api.move_student') }}" method="POST">
                 <div class="modal-body">
                     <p class="text-center text-muted mb-4">Select a student and choose a new trip.</p>
 
@@ -457,7 +457,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <form action="{{ url_for('main.swap_students') }}" method="POST">
+                <form action="{{ url_for('api.swap_students') }}" method="POST">
                 <div class="modal-body">
                     <p class="text-center text-muted mb-4">Select two students to swap their trips.</p>
 
