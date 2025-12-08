@@ -18,54 +18,12 @@ main = Blueprint('main', __name__)
 def settings():
     return render_template('settings.html',current_user=current_user)
 
-@main.route('/get-users')
-@admin_required
-def get_users():
-    """API endpoint to fetch all users."""
-    try:
-        users = User.query.all()
-        users_data = [
-            {
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'role': user.role
-            }
-            for user in users
-        ]
-        return jsonify({'users': users_data})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @main.route('/student_view')
 @student_required
 def student_view():
     settings = AppSettings.get()
     show_trips = settings.show_trips_to_students
     return render_template('student_view.html', current_user=current_user, now=datetime.now(), show_trips=show_trips)
-
-@main.route('/api/settings/show_trips', methods=['GET'])
-@admin_required
-def api_get_show_trips():
-    settings = AppSettings.get()
-    # print(settings.show_trips_to_students)
-    return jsonify({'show_trips_to_students': settings.show_trips_to_students})
-
-
-@main.route('/api/settings/toggle_show_trips', methods=['POST'])
-@admin_required
-def api_toggle_show_trips():
-    data = request.get_json() or {}
-    value = data.get('value')
-
-    settings = AppSettings.get()
-    if value is None:
-        settings.show_trips_to_students = not settings.show_trips_to_students
-    else:
-        settings.show_trips_to_students = bool(value)
-
-    db.session.commit()
-    return jsonify({'success': True, 'show_trips_to_students': settings.show_trips_to_students})
 
 @main.route('/no_access')
 @login_required
@@ -137,6 +95,73 @@ def groups():
         trip.has_open_slots = trip.current_students < trip.capacity
         trip.open_slots_count = trip.capacity - trip.current_students
     return render_template('groups.html', trips=trips, students=students)
+
+def validate_trip(trip):
+    """Validate a trip and return validation results."""
+    students = trip.students
+
+    validations = {
+        'gender_ratio': {'valid': True, 'message': '', 'details': ''},
+        'athletic_teams': {'valid': True, 'message': '', 'details': []},
+        'roommates': {'valid': True, 'message': '', 'details': []},
+        'comfort_levels': {'valid': True, 'message': '', 'details': []},
+        'overall_valid': True
+    }
+
+    if not students:
+        return validations
+
+    male_count = sum(1 for s in students if s.gender and s.gender.lower() == 'male')
+    female_count = sum(1 for s in students if s.gender and s.gender.lower() == 'female')
+    gender_diff = abs(male_count - female_count)
+    if gender_diff > 1:
+        validations['gender_ratio']['valid'] = False
+        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
+        validations['gender_ratio']['details'] = f"Gender ratio off by {gender_diff}"
+        validations['overall_valid'] = False
+    else:
+        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
+
+    athletic_teams = {}
+    for student in students:
+        if student.athletic_team and student.athletic_team.lower() not in ['n/a', 'none', '', 'null']:
+            team = student.athletic_team
+            athletic_teams.setdefault(team, []).append(f"{student.first_name} {student.last_name}")
+
+    duplicate_teams = {team: names for team, names in athletic_teams.items() if len(names) > 1}
+    if duplicate_teams:
+        validations['athletic_teams']['valid'] = False
+        for team, names in duplicate_teams.items():
+            validations['athletic_teams']['details'].append(f"{', '.join(names)} share team ({team}).")
+        validations['overall_valid'] = False
+
+    dorms = {}
+    for student in students:
+        if student.dorm:
+            dorms.setdefault(student.dorm, []).append(f"{student.first_name} {student.last_name}")
+
+    duplicate_dorms = {d: n for d, n in dorms.items() if len(n) > 1}
+    if duplicate_dorms:
+        validations['roommates']['valid'] = False
+        for dorm, names in duplicate_dorms.items():
+            validations['roommates']['details'].append(f"{', '.join(names)} share dorm ({dorm}).")
+        validations['overall_valid'] = False
+
+    if trip.water:
+        low_water = [f"{s.first_name} {s.last_name}" for s in students if s.water_comfort and int(s.water_comfort) <= 2]
+        if low_water:
+            validations['comfort_levels']['valid'] = False
+            validations['comfort_levels']['details'].append(f"Low water comfort: {', '.join(low_water)}")
+            validations['overall_valid'] = False
+
+    if trip.tent:
+        low_tent = [f"{s.first_name} {s.last_name}" for s in students if s.tent_comfort and int(s.tent_comfort) <= 2]
+        if low_tent:
+            validations['comfort_levels']['valid'] = False
+            validations['comfort_levels']['details'].append(f"Low tent comfort: {', '.join(low_tent)}")
+            validations['overall_valid'] = False
+
+    return validations
 
 @main.route('/add-student', methods=['GET', 'POST'])
 @admin_required
@@ -442,77 +467,6 @@ def remove_trip():
 
    return redirect(url_for('main.trips'))
 
-
-@main.route('/move-student', methods=['POST'])
-@admin_required
-def move_student():
-    student_input = request.form.get('student_name', '').strip()
-    new_trip_id = request.form.get('new_trip_id')
-
-    # Try to get student by ID first (from dropdown), then fall back to search
-    student = None
-    if student_input.isdigit():
-        student = Student.query.get(int(student_input))
-
-    if not student:
-        student = Student.query.filter(
-            (Student.student_id == student_input) |
-            (Student.first_name.ilike(f"%{student_input}%")) |
-            (Student.last_name.ilike(f"%{student_input}%")) |
-            ((Student.first_name + ' ' + Student.last_name).ilike(f"%{student_input}%"))
-        ).first()
-
-    new_trip = Trip.query.get(new_trip_id)
-
-    if not student or not new_trip:
-        return {"success": False, "message": "⚠️ Student or trip not found."}, 400
-
-    student.trip_id = new_trip.id
-    db.session.commit()
-
-    # Redirect back to the referring page, default to groups if no referer
-    referer = request.referrer
-    if referer and ('first-years' in referer or 'groups' in referer):
-        return redirect(referer)
-    return redirect(url_for('main.groups'))
-
-@main.route('/swap-students', methods=['POST'])
-@admin_required
-def swap_students():
-    s1_input = (request.form.get('student1_name') or "").strip()
-    s2_input = (request.form.get('student2_name') or "").strip()
-
-    # Try to get students by ID first (from dropdown), then fall back to search
-    student1 = None
-    if s1_input.isdigit():
-        student1 = Student.query.get(int(s1_input))
-
-    if not student1:
-        student1 = Student.query.filter(
-            (Student.student_id == s1_input) |
-            (Student.first_name.ilike(f"%{s1_input}%")) |
-            (Student.last_name.ilike(f"%{s1_input}%")) |
-            ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s1_input}%"))
-        ).first()
-
-    student2 = None
-    if s2_input.isdigit():
-        student2 = Student.query.get(int(s2_input))
-
-    if not student2:
-        student2 = Student.query.filter(
-            (Student.student_id == s2_input) |
-            (Student.first_name.ilike(f"%{s2_input}%")) |
-            (Student.last_name.ilike(f"%{s2_input}%")) |
-            ((Student.first_name + ' ' + Student.last_name).ilike(f"%{s2_input}%"))
-        ).first()
-
-    if student1 and student2:
-        student1.trip_id, student2.trip_id = student2.trip_id, student1.trip_id
-        db.session.commit()
-
-    return redirect(url_for('main.groups'))
-
 @main.route('/upload_csv', methods=['POST'])
 @admin_required
 def upload_csv():
@@ -619,139 +573,6 @@ def upload_csv():
 
     return redirect(url_for('main.groups'))
 
-@main.route('/process_matched_csv', methods=['POST'])
-@admin_required
-def process_matched_csv():
-    try:
-        file = request.files.get("csv_file")
-        import_mode = request.form.get("importMode")
-
-        if not file:
-            return jsonify({"success": False, "message": "No CSV uploaded."}), 400
-
-        stream = io.StringIO(file.stream.read().decode("utf-8"))
-        csv_input = csv.DictReader(stream)
-        rows = list(csv_input)
-
-        if not rows:
-            return jsonify({"success": False, "message": "CSV is empty."}), 400
-
-        column_map = {
-            csv_col: request.form.get(csv_col)
-            for csv_col in request.form
-            if csv_col not in ["csv_file", "importMode"] and request.form.get(csv_col)
-        }
-
-        valid_fields = {
-            'student_id', 'first_name', 'last_name', 'email', 'trip_id',
-            'trip_pref_1', 'trip_pref_2', 'trip_pref_3', 'dorm',
-            'athletic_team', 'gender', 'notes', 'water_comfort',
-            'tent_comfort', 'hometown', 'poc', 'fli_international'
-        }
-
-        added, updated, skipped = 0, 0, 0
-        errors = []
-
-        for idx, row in enumerate(rows, start=2):
-            try:
-                mapped = {}
-                trip_name = None
-                trip_type = None
-
-                for csv_col, db_field in column_map.items():
-                    value = (row.get(csv_col) or "").strip()
-
-                    if db_field == "trip_name":
-                        trip_name = value
-                        continue
-                    elif db_field == "trip_type":
-                        trip_type = value
-                        continue
-                    elif db_field in valid_fields:
-                        # Handle boolean fields (nullable)
-                        if db_field in ['poc', 'fli_international']:
-                            if value:
-                                mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
-                            else:
-                                mapped[db_field] = None
-                        # Handle integer fields (nullable)
-                        elif db_field in ['water_comfort', 'tent_comfort']:
-                            if value and value.isdigit():
-                                mapped[db_field] = int(value)
-                            else:
-                                mapped[db_field] = None
-                        else:
-                            mapped[db_field] = value if value else None
-
-                student_id = mapped.get("student_id")
-                if not student_id:
-                    errors.append(f"Row {idx}: Missing student_id (required)")
-                    skipped += 1
-                    continue
-
-                # Validate required fields for new students
-                if import_mode != "update":
-                    if not mapped.get('first_name'):
-                        errors.append(f"Row {idx}: Missing first_name (required)")
-                        skipped += 1
-                        continue
-                    if not mapped.get('last_name'):
-                        errors.append(f"Row {idx}: Missing last_name (required)")
-                        skipped += 1
-                        continue
-                    if not mapped.get('email'):
-                        errors.append(f"Row {idx}: Missing email (required)")
-                        skipped += 1
-                        continue
-
-                if trip_name:
-                    trip = Trip.query.filter_by(trip_name=trip_name).first()
-                    if not trip and trip_type:
-                        trip = Trip(
-                            trip_name=trip_name,
-                            trip_type=trip_type,
-                            capacity=10,
-                            water=False,
-                            tent=False
-                        )
-                        db.session.add(trip)
-                        db.session.flush()
-                    mapped["trip_id"] = trip.id if trip else None
-
-                existing = Student.query.filter_by(student_id=student_id).first()
-
-                if import_mode == "update" and existing:
-                    for key, val in mapped.items():
-                        setattr(existing, key, val)
-                    updated += 1
-
-                elif not existing:
-                    new_student = Student(**mapped)
-                    db.session.add(new_student)
-                    added += 1
-
-                else:
-                    skipped += 1
-
-            except Exception as e:
-                errors.append(f"Row {idx}: {str(e)}")
-                skipped += 1
-                continue
-
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "added": added,
-            "updated": updated,
-            "skipped": skipped,
-            "errors": errors[:10]
-        }), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
-
 @main.route('/export_csv')
 @admin_required
 def export_csv():
@@ -837,7 +658,6 @@ def export_trip_csv():
         mimetype='text/csv',
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
-
 
 @main.route('/export_pdf')
 @admin_required
@@ -999,107 +819,6 @@ def export_pdf():
     except Exception as e:
         return f"Error generating PDF: {str(e)}", 500
 
-@main.route('/process_matched_trips_csv', methods=['POST'])
-@admin_required
-def process_matched_trips_csv():
-    try:
-        file = request.files.get("csv_file")
-        import_mode = request.form.get("importMode")
-
-        if not file:
-            return jsonify({"success": False, "message": "No CSV uploaded."}), 400
-
-        stream = io.StringIO(file.stream.read().decode("utf-8"))
-        csv_input = csv.DictReader(stream)
-        rows = list(csv_input)
-
-        if not rows:
-            return jsonify({"success": False, "message": "CSV is empty."}), 400
-
-        column_map = {
-            csv_col: request.form.get(csv_col)
-            for csv_col in request.form
-            if csv_col not in ["csv_file", "importMode"] and request.form.get(csv_col)
-        }
-
-        valid_fields = {
-            'trip_name', 'trip_type', 'capacity', 'address', 'water', 'tent'
-        }
-
-        added, updated, skipped = 0, 0, 0
-        errors = []
-
-        for idx, row in enumerate(rows, start=2):
-            try:
-                mapped = {}
-
-                for csv_col, db_field in column_map.items():
-                    value = (row.get(csv_col) or "").strip()
-
-                    if db_field in valid_fields:
-                        if db_field in ['water', 'tent']:
-                            # Handle boolean fields with defaults
-                            if value:
-                                mapped[db_field] = value.lower() in ['true', '1', 'yes', 'y']
-                            # If empty, don't set it - let the model default handle it
-                        elif db_field == 'capacity':
-                            # Handle integer field (required, non-nullable)
-                            if value and value.isdigit():
-                                mapped[db_field] = int(value)
-                            # Don't set to None - will be validated or defaulted later
-                        else:
-                            mapped[db_field] = value if value else None
-
-                trip_name = mapped.get("trip_name")
-                if not trip_name:
-                    errors.append(f"Row {idx}: Missing trip_name")
-                    skipped += 1
-                    continue
-
-                existing = Trip.query.filter_by(trip_name=trip_name).first()
-
-                if import_mode == "update" and existing:
-                    for key, val in mapped.items():
-                        setattr(existing, key, val)
-                    updated += 1
-
-                elif not existing:
-                    # Ensure required fields are present
-                    if not mapped.get('trip_type'):
-                        errors.append(f"Row {idx}: Missing trip_type (required)")
-                        skipped += 1
-                        continue
-                    if not mapped.get('capacity'):
-                        errors.append(f"Row {idx}: Missing or invalid capacity (required)")
-                        skipped += 1
-                        continue
-
-                    new_trip = Trip(**mapped)
-                    db.session.add(new_trip)
-                    added += 1
-
-                else:
-                    skipped += 1
-
-            except Exception as e:
-                errors.append(f"Row {idx}: {str(e)}")
-                skipped += 1
-                continue
-
-        db.session.commit()
-
-        return jsonify({
-            "success": True,
-            "added": added,
-            "updated": updated,
-            "skipped": skipped,
-            "errors": errors[:10]
-        }), 200
-
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({"success": False, "message": str(e)}), 500
-
 @main.route('/download_sample_csv')
 @admin_required
 def download_sample_csv():
@@ -1127,19 +846,12 @@ def download_sample_csv():
         headers={"Content-Disposition": "attachment; filename=sample_students.csv"}
     )
 
-
 @main.route('/sort-students', methods=['POST'])
 @admin_required
 def sort_students_route():
-    """Handle the Sort Students button click."""
     try:
-        # Run the intelligent sorting algorithm
         stats = sort_students()
-
-        # Commit all changes to database
         db.session.commit()
-
-        # Flash success message with statistics - will show on Groups page
         flash(f'🎯 Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
               f'{stats["first_choice_rate"]:.1f}% got first choice, '
               f'{stats["assignment_rate"]:.1f}% total placement rate.', 'success')
@@ -1149,77 +861,6 @@ def sort_students_route():
         flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
 
     return redirect(url_for('main.groups'))
-
-@main.route('/api/sort-students', methods=['POST'])
-@admin_required
-def api_sort_students():
-    """API endpoint for AJAX custom sort criteria."""
-    try:
-        data = request.get_json(force=True)
-        criteria = data.get('criteria', [])
-        stats = sort_students(custom_criteria=criteria)
-        db.session.commit()
-        if stats.get('all_valid', False):
-            flash(f'🎯 Sorting completed in {stats["attempts"]} attempt(s)! '
-                f'{stats["assigned"]}/{stats["total"]} students placed. '
-                f'{stats["first_choice_rate"]:.1f}% got first choice, '
-                f'{stats["assignment_rate"]:.1f}% total placement rate. '
-                f'All trips are valid! ✓', 'success')
-        else:
-            flash(f'⚠️ Sorting completed after {stats["attempts"]} attempts, but some trips may still be invalid. '
-                f'{stats["assigned"]}/{stats["total"]} students placed. '
-                f'{stats["first_choice_rate"]:.1f}% got first choice.', 'warning')
-        return jsonify({'success': True, 'stats': stats, 'message': 'Sorting completed.'})
-    except Exception as e:
-        db.session.rollback()
-        flash(f'⚠️ Sorting failed: {str(e)}', 'danger')
-        return jsonify({'success': False, 'message': str(e)}), 400
-
-@main.route('/update-user-role', methods=['POST'])
-@manager_required
-def update_user_role():
-    """API endpoint to update a user's role."""
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        new_role = data.get('role')
-
-        if not email:
-            flash('Missing email', 'danger')
-            return jsonify({'success': False}), 400
-
-        # Validate role
-        valid_roles = ['admin_manager', 'admin', 'student', 'none', None]
-        if new_role not in valid_roles:
-            flash('Invalid role', 'danger')
-            return jsonify({'success': False}), 400
-
-        # Convert string 'none' to None
-        if new_role == 'none':
-            new_role = None
-
-        # Find user
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            flash('User not found', 'danger')
-            return jsonify({'success': False}), 404
-
-        # Prevent self-demotion from admin_manager
-        if user.email == current_user.email and current_user.role == 'admin_manager' and new_role != 'admin_manager':
-            flash('Cannot change your own admin_manager role', 'danger')
-            return jsonify({'success': False}), 403
-
-        # Update role
-        user.role = new_role
-        db.session.commit()
-
-        role_display = new_role if new_role else 'None'
-        flash(f'Successfully updated {user.first_name} {user.last_name}\'s role to {role_display}', 'success')
-        return jsonify({'success': True})
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error updating user role: {str(e)}', 'danger')
-        return jsonify({'success': False}), 500
 
 @main.route('/clear-databases', methods=['POST'])
 @manager_required
@@ -1239,70 +880,3 @@ def clear_databases():
         db.session.rollback()
         flash(f'⚠️ Error clearing databases: {str(e)}', 'danger')
     return redirect(url_for('main.settings'))
-
-def validate_trip(trip):
-    """Validate a trip and return validation results."""
-    students = trip.students
-
-    validations = {
-        'gender_ratio': {'valid': True, 'message': '', 'details': ''},
-        'athletic_teams': {'valid': True, 'message': '', 'details': []},
-        'roommates': {'valid': True, 'message': '', 'details': []},
-        'comfort_levels': {'valid': True, 'message': '', 'details': []},
-        'overall_valid': True
-    }
-
-    if not students:
-        return validations
-
-    male_count = sum(1 for s in students if s.gender and s.gender.lower() == 'male')
-    female_count = sum(1 for s in students if s.gender and s.gender.lower() == 'female')
-    gender_diff = abs(male_count - female_count)
-    if gender_diff > 1:
-        validations['gender_ratio']['valid'] = False
-        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
-        validations['gender_ratio']['details'] = f"Gender ratio off by {gender_diff}"
-        validations['overall_valid'] = False
-    else:
-        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
-
-    athletic_teams = {}
-    for student in students:
-        if student.athletic_team and student.athletic_team.lower() not in ['n/a', 'none', '', 'null']:
-            team = student.athletic_team
-            athletic_teams.setdefault(team, []).append(f"{student.first_name} {student.last_name}")
-
-    duplicate_teams = {team: names for team, names in athletic_teams.items() if len(names) > 1}
-    if duplicate_teams:
-        validations['athletic_teams']['valid'] = False
-        for team, names in duplicate_teams.items():
-            validations['athletic_teams']['details'].append(f"{', '.join(names)} share team ({team}).")
-        validations['overall_valid'] = False
-
-    dorms = {}
-    for student in students:
-        if student.dorm:
-            dorms.setdefault(student.dorm, []).append(f"{student.first_name} {student.last_name}")
-
-    duplicate_dorms = {d: n for d, n in dorms.items() if len(n) > 1}
-    if duplicate_dorms:
-        validations['roommates']['valid'] = False
-        for dorm, names in duplicate_dorms.items():
-            validations['roommates']['details'].append(f"{', '.join(names)} share dorm ({dorm}).")
-        validations['overall_valid'] = False
-
-    if trip.water:
-        low_water = [f"{s.first_name} {s.last_name}" for s in students if s.water_comfort and int(s.water_comfort) <= 2]
-        if low_water:
-            validations['comfort_levels']['valid'] = False
-            validations['comfort_levels']['details'].append(f"Low water comfort: {', '.join(low_water)}")
-            validations['overall_valid'] = False
-
-    if trip.tent:
-        low_tent = [f"{s.first_name} {s.last_name}" for s in students if s.tent_comfort and int(s.tent_comfort) <= 2]
-        if low_tent:
-            validations['comfort_levels']['valid'] = False
-            validations['comfort_levels']['details'].append(f"Low tent comfort: {', '.join(low_tent)}")
-            validations['overall_valid'] = False
-
-    return validations
