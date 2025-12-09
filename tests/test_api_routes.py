@@ -143,7 +143,7 @@ def test_get_students_requires_admin(test_client):
     response = test_client.get('/api/students')
     assert response.status_code in [401, 302, 403]
 
-def test_get_students_success(authenticated_admin_client, sample_student):
+def test_get_students_success(authenticated_admin_client):
     """Test successful retrieval of students list"""
     response = authenticated_admin_client.get('/api/students')
     
@@ -176,7 +176,7 @@ def test_get_trips_requires_admin(test_client):
     response = test_client.get('/api/trips')
     assert response.status_code in [401, 302, 403]
 
-def test_get_trips_success(authenticated_admin_client, sample_trip):
+def test_get_trips_success(authenticated_admin_client):
     """Test successful retrieval of trips list"""
     response = authenticated_admin_client.get('/api/trips')
     
