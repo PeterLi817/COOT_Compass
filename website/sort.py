@@ -334,9 +334,8 @@ def sort_students(custom_criteria=None):
     Runs sorting repeatedly until all trips are valid or max attempts reached.
     Returns statistics about the sorting process.
     """
-    from models import Trip
     # Import validate_trip from views to avoid code duplication
-    from views import validate_trip
+    from .views import validate_trip
 
     max_attempts = 100  # Prevent infinite loops
     attempt = 0

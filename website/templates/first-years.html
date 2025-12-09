@@ -358,7 +358,7 @@
                 <h5 class="modal-title" id="uploadCSVModalLabel">Upload CSV File</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="csvMatchingForm" method="POST" enctype="multipart/form-data" action="{{ url_for('main.process_matched_csv') }}">
+                <form id="csvMatchingForm" method="POST" enctype="multipart/form-data" action="{{ url_for('api.process_matched_csv') }}">
                 <div class="modal-body">
                     <!-- Instructions Section -->
                     <div class="alert alert-info" role="alert">
