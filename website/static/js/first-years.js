@@ -208,6 +208,7 @@ window.addEventListener('DOMContentLoaded', function() {
         { value: 'trip_pref_3', label: 'Trip Preference 3' },
         { value: 'poc', label: 'POC' },
         { value: 'fli_international', label: 'FLI/International' },
+        { value: 'allergies_dietary_restrictions', label: 'Allergies & Dietary Restrictions' },
         { value: 'notes', label: 'Notes' }
     ];
 
@@ -288,6 +289,7 @@ window.addEventListener('DOMContentLoaded', function() {
             else if (csvLower.includes('pref') && csvLower.includes('3')) autoMatch = 'trip_pref_3';
             else if (csvLower.includes('poc')) autoMatch = 'poc';
             else if (csvLower.includes('fli') || csvLower.includes('international')) autoMatch = 'fli_international';
+            else if (csvLower.includes('allerg') || csvLower.includes('dietary') || csvLower.includes('restriction')) autoMatch = 'allergies_dietary_restrictions';
             else if (csvLower.includes('note')) autoMatch = 'notes';
 
             dbFields.forEach(field => {
