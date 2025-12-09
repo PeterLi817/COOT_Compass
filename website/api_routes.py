@@ -1,23 +1,44 @@
+"""API routes for COOT Compass.
+
+This module provides RESTful API endpoints for managing students, trips, users,
+and application settings. All endpoints return JSON responses and require
+appropriate authentication and authorization based on user roles.
+"""
+
 import io
 import csv
+
 from flask import Blueprint, jsonify, request, flash
+from flask_login import current_user
+
 from website import db
 from .models import AppSettings, Student, Trip, User
-from flask_login import login_required, current_user
-from .static.utils.decorators import manager_required, admin_required, student_required
+from .static.utils.decorators import manager_required, admin_required
 from .sort import sort_students
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
-# Health check
 @api.route('/health', methods=['GET'])
 def health_check():
+    """Check the health status of the API.
+
+    Returns:
+        dict: A JSON response indicating the API is running.
+    """
     return jsonify({'status': 'healthy', 'message': 'COOT Compass API running'})
 
-# Get all students
 @api.route('/students', methods=['GET'])
 @admin_required
 def get_students():
+    """Retrieve all students from the database.
+
+    Returns a JSON response containing all student records with their
+    associated trip information and preferences.
+
+    Returns:
+        dict: JSON response with success status and list of students.
+            On error, returns error message with 500 status code.
+    """
     try:
         students = Student.query.all()
         return jsonify({
@@ -40,10 +61,18 @@ def get_students():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Get all trips
 @api.route('/trips', methods=['GET'])
 @admin_required
 def get_trips():
+    """Retrieve all trips from the database.
+
+    Returns a JSON response containing all trip records with their
+    capacity information, current student count, and assigned students.
+
+    Returns:
+        dict: JSON response with success status and list of trips.
+            On error, returns error message with 500 status code.
+    """
     try:
         trips = Trip.query.all()
         return jsonify({
@@ -68,10 +97,24 @@ def get_trips():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Move student to trip
 @api.route('/move-student', methods=['POST'])
 @admin_required
 def move_student():
+    """Move a student to a different trip or remove them from their current trip.
+
+    Expects JSON data with 'student_id' and optionally 'new_trip_id'.
+    If 'new_trip_id' is None or not provided, the student is removed from
+    their current trip.
+
+    Args (JSON):
+        student_id (int): The ID of the student to move.
+        new_trip_id (int, optional): The ID of the destination trip.
+
+    Returns:
+        dict: JSON response with success status and operation message.
+            Returns 400 if trip is at capacity, 404 if student/trip not found,
+            or 500 on error.
+    """
     try:
         data = request.get_json()
         student_id = data.get('student_id')
@@ -91,10 +134,16 @@ def move_student():
                 }), 400
 
             student.trip_id = new_trip_id
-            message = f'{student.first_name} {student.last_name} moved from {old_trip_name} to {new_trip.trip_name}'
+            message = (
+                f'{student.first_name} {student.last_name} moved from '
+                f'{old_trip_name} to {new_trip.trip_name}'
+            )
         else:
             student.trip_id = None
-            message = f'{student.first_name} {student.last_name} removed from {old_trip_name}'
+            message = (
+                f'{student.first_name} {student.last_name} removed from '
+                f'{old_trip_name}'
+            )
 
         db.session.commit()
 
@@ -107,10 +156,22 @@ def move_student():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Swap students
 @api.route('/swap-students', methods=['POST'])
 @admin_required
 def swap_students():
+    """Swap the trip assignments of two students.
+
+    Expects JSON data with 'student1_id' and 'student2_id'. The students
+    will exchange their current trip assignments.
+
+    Args (JSON):
+        student1_id (int): The ID of the first student.
+        student2_id (int): The ID of the second student.
+
+    Returns:
+        dict: JSON response with success status and swap confirmation message.
+            Returns 404 if either student is not found, or 500 on error.
+    """
     try:
         data = request.get_json()
         student1_id = data.get('student1_id')
@@ -130,20 +191,32 @@ def swap_students():
 
         db.session.commit()
 
+        message = (
+            f'Swapped {student1.first_name} {student1.last_name} ({trip1_name}) '
+            f'with {student2.first_name} {student2.last_name} ({trip2_name})'
+        )
+
         return jsonify({
             'success': True,
-            'message': f'Swapped {student1.first_name} {student1.last_name} ({trip1_name}) with {student2.first_name} {student2.last_name} ({trip2_name})'
+            'message': message
         })
 
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)}), 500
 
-# Get users
 @api.route('/get-users')
 @admin_required
 def get_users():
-    """API endpoint to fetch all users."""
+    """Retrieve all users from the database.
+
+    Returns a JSON response containing all user records with their
+    email, name, and role information.
+
+    Returns:
+        dict: JSON response with list of users.
+            Returns 500 status code on error.
+    """
     try:
         users = User.query.all()
         users_data = [
@@ -159,17 +232,31 @@ def get_users():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Show trips to students settings
 @api.route('/settings/show_trips', methods=['GET'])
 @admin_required
 def api_get_show_trips():
+    """Get the current setting for whether trips are visible to students.
+
+    Returns:
+        dict: JSON response with the current 'show_trips_to_students' setting value.
+    """
     settings = AppSettings.get()
     return jsonify({'show_trips_to_students': settings.show_trips_to_students})
 
-# Toggle show trips to students setting
 @api.route('/settings/toggle_show_trips', methods=['POST'])
 @admin_required
 def api_toggle_show_trips():
+    """Toggle or set the visibility of trips to students.
+
+    Expects optional JSON data with 'value' (boolean). If 'value' is provided,
+    sets the setting to that value. Otherwise, toggles the current value.
+
+    Args (JSON, optional):
+        value (bool, optional): The desired value for the setting.
+
+    Returns:
+        dict: JSON response with success status and updated setting value.
+    """
     data = request.get_json() or {}
     value = data.get('value')
 
@@ -182,10 +269,26 @@ def api_toggle_show_trips():
     db.session.commit()
     return jsonify({'success': True, 'show_trips_to_students': settings.show_trips_to_students})
 
-# Process matched CSV for students
 @api.route('/process_matched_csv', methods=['POST'])
 @admin_required
 def process_matched_csv():
+    """Process a CSV file to import or update student data.
+
+    Accepts a CSV file and form data mapping CSV columns to database fields.
+    Supports two import modes: 'update' (updates existing students) or
+    'add' (only adds new students). Can also create trips if trip_name
+    and trip_type are provided.
+
+    Args (form data):
+        csv_file: The uploaded CSV file.
+        importMode: Either 'update' or 'add'.
+        Column mappings: Form fields mapping CSV column names to database fields.
+
+    Returns:
+        dict: JSON response with success status, counts of added/updated/skipped
+            records, and any errors encountered. Returns 400 if no file provided
+            or CSV is empty, or 500 on error.
+    """
     try:
         file = request.files.get("csv_file")
         import_mode = request.form.get("importMode")
@@ -228,10 +331,10 @@ def process_matched_csv():
                     if db_field == "trip_name":
                         trip_name = value
                         continue
-                    elif db_field == "trip_type":
+                    if db_field == "trip_type":
                         trip_type = value
                         continue
-                    elif db_field in valid_fields:
+                    if db_field in valid_fields:
                         # Handle boolean fields (nullable)
                         if db_field in ['poc', 'fli_international']:
                             if value:
@@ -316,10 +419,25 @@ def process_matched_csv():
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
-# Process matched CSV for trips
 @api.route('/process_matched_trips_csv', methods=['POST'])
 @admin_required
 def process_matched_trips_csv():
+    """Process a CSV file to import or update trip data.
+
+    Accepts a CSV file and form data mapping CSV columns to database fields.
+    Supports two import modes: 'update' (updates existing trips) or
+    'add' (only adds new trips).
+
+    Args (form data):
+        csv_file: The uploaded CSV file.
+        importMode: Either 'update' or 'add'.
+        Column mappings: Form fields mapping CSV column names to database fields.
+
+    Returns:
+        dict: JSON response with success status, counts of added/updated/skipped
+            records, and any errors encountered. Returns 400 if no file provided
+            or CSV is empty, or 500 on error.
+    """
     try:
         file = request.files.get("csv_file")
         import_mode = request.form.get("importMode")
@@ -418,11 +536,24 @@ def process_matched_trips_csv():
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
-# Update user role
 @api.route('/update-user-role', methods=['POST'])
 @manager_required
 def update_user_role():
-    """API endpoint to update a user's role."""
+    """Update a user's role in the system.
+
+    Expects JSON data with 'email' and 'role'. Valid roles are:
+    'admin_manager', 'admin', 'student', 'none' (or None).
+
+    Args (JSON):
+        email (str): The email of the user to update.
+        role (str): The new role for the user. Can be 'admin_manager', 'admin',
+            'student', 'none', or None.
+
+    Returns:
+        dict: JSON response with success status. Returns 400 for invalid input,
+            403 if attempting to change own admin_manager role, 404 if user not
+            found, or 500 on error.
+    """
     try:
         data = request.get_json()
         email = data.get('email')
@@ -449,7 +580,11 @@ def update_user_role():
             return jsonify({'success': False}), 404
 
         # Prevent self-demotion from admin_manager
-        if user.email == current_user.email and current_user.role == 'admin_manager' and new_role != 'admin_manager':
+        if (
+            user.email == current_user.email
+            and current_user.role == 'admin_manager'
+            and new_role != 'admin_manager'
+        ):
             flash('Cannot change your own admin_manager role', 'danger')
             return jsonify({'success': False}), 403
 
@@ -458,17 +593,33 @@ def update_user_role():
         db.session.commit()
 
         role_display = new_role if new_role else 'None'
-        flash(f'Successfully updated {user.first_name} {user.last_name}\'s role to {role_display}', 'success')
+        flash(
+            f"Successfully updated {user.first_name} "
+            f"{user.last_name}'s role to {role_display}",
+            'success'
+        )
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating user role: {str(e)}', 'danger')
         return jsonify({'success': False}), 500
 
-# Sort students
 @api.route('/sort-students', methods=['POST'])
 @admin_required
 def sort_students_api():
+    """Automatically sort and assign students to trips based on preferences.
+
+    Optionally accepts custom sorting criteria. Uses the COOT sorting algorithm
+    to assign students to trips while respecting constraints like capacity,
+    gender balance, dorm assignments, and athletic teams.
+
+    Args (JSON, optional):
+        criteria (list, optional): Custom sorting criteria to use.
+
+    Returns:
+        dict: JSON response with success status, completion message, and
+            sorting statistics. Returns 400 on error.
+    """
     try:
         data = request.get_json(silent=True) or {}
         criteria = data.get('criteria')

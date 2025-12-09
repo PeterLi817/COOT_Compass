@@ -1,12 +1,34 @@
+"""Student sorting algorithm for COOT trip assignments.
+
+This module implements an intelligent sorting algorithm that assigns students
+to trips based on their preferences while respecting various constraints
+including capacity, gender balance, dorm assignments, athletic teams, and
+comfort levels. The algorithm prioritizes students with special constraints
+and attempts to maximize preference satisfaction.
+"""
+
+import random
+from collections import defaultdict
 from website import db
 from .models import Student, Trip
-from collections import defaultdict
-import random
 
 class COOTSorter:
-    """Intelligent COOT student sorting algorithm."""
+    """Intelligent COOT student sorting algorithm.
+
+    This class implements a sophisticated sorting algorithm that assigns
+    students to trips while balancing multiple constraints and preferences.
+    It tracks statistics about the sorting process and can use custom
+    criteria ordering for constraint checking.
+    """
 
     def __init__(self, custom_criteria=None):
+        """Initialize the COOT sorter with optional custom criteria.
+
+        Args:
+            custom_criteria (list, optional): List of criteria dictionaries
+                specifying custom constraint checking order. Each dictionary
+                should have a 'type' key indicating the constraint type.
+        """
         self.custom_criteria = custom_criteria or []
         self.trip_trackers = {}
         self.trips_by_type = defaultdict(list)
@@ -22,9 +44,28 @@ class COOTSorter:
         }
 
     def sort_all_students(self):
-        """
-        Main sorting function that assigns all students to trips
-        based on preferences while respecting constraints.
+        """Main sorting function that assigns all students to trips.
+
+        Processes all students and assigns them to trips based on their
+        preferences while respecting constraints. Students with special
+        constraints (low water/tent comfort) are processed first. The
+        algorithm attempts to satisfy preferences in order (first, second,
+        third) and uses emergency placement for students whose preferences
+        cannot be satisfied.
+
+        Returns:
+            dict: Statistics dictionary containing:
+                - total: Total number of students
+                - assigned: Number of students successfully assigned
+                - first_choice: Number assigned to first preference
+                - second_choice: Number assigned to second preference
+                - third_choice: Number assigned to third preference
+                - no_preference: Number assigned via emergency placement
+                - assignment_rate: Percentage of students assigned
+                - first_choice_rate: Percentage who got first choice
+
+        Raises:
+            Exception: If no students or trips are found in the database.
         """
         # Get all students and trips
         students = Student.query.all()
@@ -63,7 +104,15 @@ class COOTSorter:
         return self.stats
 
     def _initialize_trip_trackers(self, trips):
-        """Initialize tracking structures for all trips."""
+        """Initialize tracking structures for all trips.
+
+        Creates tracking dictionaries for each trip to monitor capacity,
+        assigned students, dorms, athletic teams, and gender distribution.
+        Also organizes trips by type for efficient preference matching.
+
+        Args:
+            trips (list): List of Trip objects to initialize tracking for.
+        """
         self.trip_trackers = {}
         self.trips_by_type = defaultdict(list)
 
@@ -79,7 +128,19 @@ class COOTSorter:
             self.trips_by_type[trip.trip_type].append(trip)
 
     def _categorize_students(self, students, trips):
-        """Separate students into priority and regular groups."""
+        """Separate students into priority and regular groups.
+
+        Students with low comfort levels (<=2) for water or tent activities
+        are placed in the priority group to ensure they are assigned to
+        compatible trips first.
+
+        Args:
+            students (list): List of Student objects to categorize.
+            trips (list): List of Trip objects to check for water/tent requirements.
+
+        Returns:
+            tuple: (priority_students, regular_students) - Two lists of students.
+        """
         priority_students = []
         regular_students = []
 
@@ -99,7 +160,15 @@ class COOTSorter:
         return priority_students, regular_students
 
     def _process_student_batch(self, students):
-        """Process a batch of students for trip assignment."""
+        """Process a batch of students for trip assignment.
+
+        Attempts to assign each student to a trip based on their preferences
+        in order (first, second, third). If no preferences can be satisfied,
+        uses emergency placement to find the best available trip.
+
+        Args:
+            students (list): List of Student objects to process.
+        """
         for student in students:
             if student.trip_id:  # Already assigned
                 continue
@@ -148,7 +217,20 @@ class COOTSorter:
                     self.stats['no_preference'] += 1
 
     def _can_place_student_in_trip(self, student, trip):
-        """Check if student can be placed in trip without violating constraints, using custom criteria order if provided."""
+        """Check if student can be placed in trip without violating constraints.
+
+        Validates that placing the student in the trip would not violate
+        any constraints including capacity, water/tent comfort, dorm
+        assignments, athletic teams, and gender balance. Uses custom
+        criteria order if provided, otherwise uses default order.
+
+        Args:
+            student (Student): The student to check placement for.
+            trip (Trip): The trip to check placement in.
+
+        Returns:
+            bool: True if the student can be placed, False otherwise.
+        """
         tracker = self.trip_trackers[trip.id]
 
         # Always check capacity first
@@ -156,6 +238,7 @@ class COOTSorter:
             return False
 
         # Build a map of constraint checkers
+        # trip preference is handled in batch logic, not as a constraint
         constraint_checkers = {
             'dorm': lambda: not (student.dorm and student.dorm in tracker['dorms']),
             'sports_team': lambda: not (
@@ -164,7 +247,7 @@ class COOTSorter:
                 student.athletic_team in tracker['teams']
             ),
             'gender': lambda: self._check_gender_balance(student, trip),
-            'trip_preference': lambda: True,  # trip preference is handled in batch logic, not as a constraint
+            'trip_preference': lambda: True,
         }
         # Always check water/tent comfort as hard constraints
         if trip.water and student.water_comfort and int(student.water_comfort) <= 2:
@@ -172,18 +255,28 @@ class COOTSorter:
         if trip.tent and student.tent_comfort and int(student.tent_comfort) <= 2:
             return False
 
-        # LOG: Show the custom criteria being used for this sort (remove after debugging)
+        # LOG: Show the custom criteria being used for this sort
+        # (remove after debugging)
         if self.custom_criteria:
-            print(f"[COOTSorter] Using custom criteria order: {[c['type'] for c in self.custom_criteria]}")
+            print(
+                f"[COOTSorter] Using custom criteria order: "
+                f"{[c['type'] for c in self.custom_criteria]}"
+            )
 
         # If custom_criteria is set, use its order for constraints
         if self.custom_criteria:
             for crit in self.custom_criteria:
                 checker = constraint_checkers.get(crit['type'])
-                # LOG: Show which constraint is being checked for this student/trip (remove after debugging)
+                # LOG: Show which constraint is being checked for this student/trip
+                # (remove after debugging)
                 if checker:
                     result = checker()
-                    print(f"[COOTSorter] Checking {crit['type']} for student {getattr(student, 'student_id', None)} in trip {getattr(trip, 'id', None)}: {'PASS' if result else 'FAIL'}")
+                    print(
+                        f"[COOTSorter] Checking {crit['type']} for student "
+                        f"{getattr(student, 'student_id', None)} in trip "
+                        f"{getattr(trip, 'id', None)}: "
+                        f"{'PASS' if result else 'FAIL'}"
+                    )
                     if not result:
                         return False
         else:
@@ -199,7 +292,20 @@ class COOTSorter:
         return True
 
     def _check_gender_balance(self, student, trip):
-        """Check if placing student in trip would maintain gender balance."""
+        """Check if placing student in trip would maintain gender balance.
+
+        Ensures that the gender distribution in the trip remains balanced.
+        The difference between any two gender counts should not exceed 1.
+        Prevents adding more than 2 of a single gender when others are at 0
+        to encourage diversity.
+
+        Args:
+            student (Student): The student to check placement for.
+            trip (Trip): The trip to check gender balance for.
+
+        Returns:
+            bool: True if placement maintains balance, False otherwise.
+        """
         tracker = self.trip_trackers[trip.id]
         current_students = len(tracker['students'])
         if current_students == 0:
@@ -234,7 +340,15 @@ class COOTSorter:
         return True
 
     def _place_student_in_trip(self, student, trip):
-        """Place student in trip and update tracking structures."""
+        """Place student in trip and update tracking structures.
+
+        Assigns the student to the trip and updates all tracking structures
+        including capacity, dorm sets, athletic team sets, and gender counts.
+
+        Args:
+            student (Student): The student to place.
+            trip (Trip): The trip to place the student in.
+        """
         student.trip_id = trip.id
 
         tracker = self.trip_trackers[trip.id]
@@ -254,11 +368,22 @@ class COOTSorter:
         tracker['gender_count'][student_gender] += 1
 
     def _find_emergency_placement(self, student):
-        """Find best available trip for student when preferences don't work."""
+        """Find best available trip for student when preferences don't work.
+
+        Scores all available trips based on how well they match the student's
+        constraints and preferences. Returns the trip with the highest score
+        that has available capacity and meets hard constraints (water/tent comfort).
+
+        Args:
+            student (Student): The student needing emergency placement.
+
+        Returns:
+            Trip: The best available trip, or None if no suitable trip found.
+        """
         best_trip = None
         best_score = -1
 
-        for trip_id, tracker in self.trip_trackers.items():
+        for _, tracker in self.trip_trackers.items():
             trip = tracker['trip']
 
             # Must have capacity
@@ -309,10 +434,20 @@ class COOTSorter:
         return best_trip
 
     def _calculate_final_stats(self):
-        """Calculate final placement statistics."""
+        """Calculate final placement statistics.
+
+        Computes assignment rate and first choice rate percentages based
+        on the sorting results. Updates the stats dictionary with these
+        calculated values.
+        """
         if self.stats['total'] > 0:
-            self.stats['assignment_rate'] = (self.stats['assigned'] / self.stats['total']) * 100
-            self.stats['first_choice_rate'] = (self.stats['first_choice'] / self.stats['total']) * 100
+            self.stats['assignment_rate'] = (
+                self.stats['assigned'] / self.stats['total']
+            ) * 100
+            self.stats['first_choice_rate'] = (
+                self.stats['first_choice'] / self.stats['total']
+            ) * 100
+
         else:
             self.stats['assignment_rate'] = 0
             self.stats['first_choice_rate'] = 0
@@ -329,10 +464,22 @@ class COOTSorter:
 
 
 def sort_students(custom_criteria=None):
-    """
-    Main entry point for sorting students.
-    Runs sorting repeatedly until all trips are valid or max attempts reached.
-    Returns statistics about the sorting process.
+    """Main entry point for sorting students into trips.
+
+    Runs the sorting algorithm repeatedly until all trips pass validation
+    or the maximum number of attempts is reached. Validates each trip after
+    sorting to ensure constraints are met. Resets assignments between attempts
+    if validation fails.
+
+    Args:
+        custom_criteria (list, optional): Custom sorting criteria to use
+            for constraint checking order.
+
+    Returns:
+        dict: Statistics dictionary from the sorting process, with additional
+            keys:
+            - attempts: Number of sorting attempts made
+            - all_valid: Boolean indicating if all trips passed validation
     """
     # Import validate_trip from views to avoid code duplication
     from .views import validate_trip

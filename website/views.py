@@ -1,38 +1,81 @@
-from website import db
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, Response, send_file
-from .models import Student, Trip, db, User, AppSettings
-from flask_login import login_required, current_user
+"""Main view routes for COOT Compass web interface.
+
+This module provides all the main web routes for the application including
+student management, trip management, group viewing, CSV import/export,
+PDF generation, and various administrative functions.
+"""
 import csv
 import io
-from .sort import sort_students
 import json
-from .static.utils.decorators import manager_required, admin_required, student_required
 from datetime import datetime
+
+from flask import Blueprint, render_template, redirect, url_for, request, flash, Response, send_file
+from flask_login import login_required, current_user
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+
+from website import db
+from .models import Student, Trip, db, User, AppSettings
+from .sort import sort_students
+from .static.utils.decorators import manager_required, admin_required, student_required
 
 main = Blueprint('main', __name__)
 
 @main.route('/settings')
 @admin_required
 def settings():
+    """Display the application settings page.
+
+    Returns:
+        Response: Rendered settings template with current user information.
+    """
     return render_template('settings.html',current_user=current_user)
 
 @main.route('/student_view')
 @student_required
 def student_view():
+    """Display the student view page.
+
+    Shows students their assigned trip information if the setting allows
+    trips to be visible to students.
+
+    Returns:
+        Response: Rendered student view template with current user and
+            trip visibility setting.
+    """
     settings = AppSettings.get()
     show_trips = settings.show_trips_to_students
-    return render_template('student_view.html', current_user=current_user, now=datetime.now(), show_trips=show_trips)
+    return render_template(
+        'student_view.html',
+        current_user=current_user,
+        now=datetime.now(),
+        show_trips=show_trips
+    )
 
 @main.route('/no_access')
 @login_required
 def no_access():
+    """Display the no access page for users without assigned roles.
+
+    Shown to authenticated users who do not have a role assigned in the system.
+
+    Returns:
+        Response: Rendered no access template with current user information.
+    """
     return render_template('no_view.html', current_user=current_user, now=datetime.now())
 
 @main.route('/trips')
 @admin_required
 def trips():
+    """Display the trips management page.
+
+    Shows all trips with their details and provides interface for managing
+    trip information.
+
+    Returns:
+        Response: Rendered trips template with all trips and JSON data.
+    """
     trips = Trip.query.all()
 
     # Create a dictionary mapping trip IDs to their data for JSON
@@ -53,6 +96,15 @@ def trips():
 @main.route('/first-years')
 @admin_required
 def first_years():
+    """Display the first-year students management page.
+
+    Shows all students with their details, preferences, and assignments.
+    Provides interface for managing student information.
+
+    Returns:
+        Response: Rendered first-years template with all students, trips,
+            unique trip types, and JSON data.
+    """
     students = Student.query.all()
     trips = Trip.query.all()
     unique_trip_types_query = db.session.query(Trip.trip_type).distinct().order_by(Trip.trip_type)
@@ -72,21 +124,48 @@ def first_years():
             'hometown': student.hometown or '',
             'notes': student.notes or '',
             'poc': student.poc if student.poc is not None else False,
-            'fli_international': student.fli_international if student.fli_international is not None else False,
+            'fli_international': (
+                student.fli_international
+                if student.fli_international is not None
+                else False
+            ),
             'trip_pref_1': student.trip_pref_1 or '',
             'trip_pref_2': student.trip_pref_2 or '',
             'trip_pref_3': student.trip_pref_3 or '',
             'gender': student.gender or '',
-            'water_comfort': str(student.water_comfort) if student.water_comfort is not None else '',
-            'tent_comfort': str(student.tent_comfort) if student.tent_comfort is not None else '',
+            'water_comfort': (
+                str(student.water_comfort)
+                if student.water_comfort is not None
+                else ''
+            ),
+            'tent_comfort': (
+                str(student.tent_comfort)
+                if student.tent_comfort is not None
+                else ''
+            ),
             'trip_id': student.trip_id
         }
 
-    return render_template('first-years.html', students=students, trips=trips, unique_trip_types=unique_trip_types, students_data_json=json.dumps(students_data))
+    return render_template(
+        'first-years.html',
+        students=students,
+        trips=trips,
+        unique_trip_types=unique_trip_types,
+        students_data_json=json.dumps(students_data),
+    )
 
 @main.route('/groups')
 @admin_required
 def groups():
+    """Display the groups/trips overview page.
+
+    Shows all trips with their assigned students, validation status,
+    and capacity information. This is the main page for viewing and
+    managing trip assignments.
+
+    Returns:
+        Response: Rendered groups template with all trips and students.
+    """
     trips = Trip.query.all()
     students = Student.query.all()
     for trip in trips:
@@ -97,7 +176,22 @@ def groups():
     return render_template('groups.html', trips=trips, students=students)
 
 def validate_trip(trip):
-    """Validate a trip and return validation results."""
+    """Validate a trip's student assignments against constraints.
+
+    Checks various constraints including gender balance, athletic team
+    diversity, dorm diversity, and comfort levels for water/tent activities.
+
+    Args:
+        trip (Trip): The trip to validate.
+
+    Returns:
+        dict: Validation results dictionary with keys:
+            - gender_ratio: Validation status and message for gender balance
+            - athletic_teams: Validation status and list of duplicate teams
+            - roommates: Validation status and list of duplicate dorms
+            - comfort_levels: Validation status and list of comfort issues
+            - overall_valid: Boolean indicating if all validations passed
+    """
     students = trip.students
 
     validations = {
@@ -124,7 +218,10 @@ def validate_trip(trip):
 
     athletic_teams = {}
     for student in students:
-        if student.athletic_team and student.athletic_team.lower() not in ['n/a', 'none', '', 'null']:
+        if (
+            student.athletic_team and
+            student.athletic_team.lower() not in ['n/a', 'none', '', 'null']
+        ):
             team = student.athletic_team
             athletic_teams.setdefault(team, []).append(f"{student.first_name} {student.last_name}")
 
@@ -132,7 +229,9 @@ def validate_trip(trip):
     if duplicate_teams:
         validations['athletic_teams']['valid'] = False
         for team, names in duplicate_teams.items():
-            validations['athletic_teams']['details'].append(f"{', '.join(names)} share team ({team}).")
+            validations['athletic_teams']['details'].append(
+                f"{', '.join(names)} share team ({team})."
+            )
         validations['overall_valid'] = False
 
     dorms = {}
@@ -148,17 +247,29 @@ def validate_trip(trip):
         validations['overall_valid'] = False
 
     if trip.water:
-        low_water = [f"{s.first_name} {s.last_name}" for s in students if s.water_comfort and int(s.water_comfort) <= 2]
+        low_water = [
+            f"{s.first_name} {s.last_name}"
+            for s in students
+            if s.water_comfort and int(s.water_comfort) <= 2
+        ]
         if low_water:
             validations['comfort_levels']['valid'] = False
-            validations['comfort_levels']['details'].append(f"Low water comfort: {', '.join(low_water)}")
+            validations['comfort_levels']['details'].append(
+                f"Low water comfort: {', '.join(low_water)}"
+            )
             validations['overall_valid'] = False
 
     if trip.tent:
-        low_tent = [f"{s.first_name} {s.last_name}" for s in students if s.tent_comfort and int(s.tent_comfort) <= 2]
+        low_tent = [
+            f"{s.first_name} {s.last_name}"
+            for s in students
+            if s.tent_comfort and int(s.tent_comfort) <= 2
+        ]
         if low_tent:
             validations['comfort_levels']['valid'] = False
-            validations['comfort_levels']['details'].append(f"Low tent comfort: {', '.join(low_tent)}")
+            validations['comfort_levels']['details'].append(
+                f"Low tent comfort: {', '.join(low_tent)}"
+            )
             validations['overall_valid'] = False
 
     return validations
@@ -166,6 +277,14 @@ def validate_trip(trip):
 @main.route('/add-student', methods=['GET', 'POST'])
 @admin_required
 def add_student():
+    """Add a new student to the database.
+
+    Handles POST requests to create a new student record with all provided
+    information including preferences, demographics, and optional trip assignment.
+
+    Returns:
+        Response: Redirect to first-years page with success/error flash message.
+    """
     if request.method == 'POST':
         student_id = request.form.get('student_id')
         email = request.form.get('email')
@@ -176,7 +295,10 @@ def add_student():
             flash('Error: Missing required fields.', 'danger')
             return redirect(url_for('main.first_years'))
 
-        if Student.query.filter((Student.student_id == student_id) | (Student.email == email)).first():
+        if Student.query.filter(
+            (Student.student_id == student_id) |
+            (Student.email == email)
+        ).first():
             flash('Error: Student with that ID or Email already exists.', 'danger')
             return redirect(url_for('main.first_years'))
 
@@ -197,8 +319,16 @@ def add_student():
             athletic_team=request.form.get('athletic_team'),
             notes=request.form.get('notes'),
             gender=request.form.get('gender'),
-            water_comfort=int(request.form.get('water_comfort')) if request.form.get('water_comfort') else None,
-            tent_comfort=int(request.form.get('tent_comfort')) if request.form.get('tent_comfort') else None,
+            water_comfort=(
+                int(request.form.get('water_comfort'))
+                if request.form.get('water_comfort')
+                else None
+            ),
+            tent_comfort=(
+                int(request.form.get('tent_comfort'))
+                if request.form.get('tent_comfort')
+                else None
+            ),
             hometown=request.form.get('hometown'),
             poc=poc,
             fli_international=fli_international,
@@ -220,6 +350,14 @@ def add_student():
 @main.route('/edit-student', methods=['POST'])
 @admin_required
 def edit_student():
+    """Edit an existing student's information.
+
+    Updates a student record with new information from the form. Validates
+    that student_id and email are unique if changed.
+
+    Returns:
+        Response: Redirect to first-years page with success/error flash message.
+    """
     # Get the database primary key (id) from the hidden form field
     student_db_id = request.form.get('student_db_id')
 
@@ -237,7 +375,8 @@ def edit_student():
         flash('Error: Student not found.', 'danger')
         return redirect(url_for('main.first_years'))
 
-    # Get form data - check for student_id_field first (edit mode), then fall back to student_id (add mode)
+    # Get form data - check for student_id_field first (edit mode),
+    # then fall back to student_id (add mode)
     student_id_field = request.form.get('student_id_field') or request.form.get('student_id')
     email = request.form.get('email')
     first_name = request.form.get('first_name')
@@ -248,9 +387,13 @@ def edit_student():
         flash('Error: Missing required fields.', 'danger')
         return redirect(url_for('main.first_years'))
 
-    # Check if student_id or email is being changed to a value that already exists (for a different student)
+    # Check if student_id or email is being changed to a value
+    # that already exists (for a different student)
     if student_id_field != student.student_id:
-        if Student.query.filter(Student.student_id == student_id_field, Student.id != student.id).first():
+        if Student.query.filter(
+            Student.student_id == student_id_field,
+            Student.id != student.id
+        ).first():
             flash('Error: Student ID already exists for another student.', 'danger')
             return redirect(url_for('main.first_years'))
 
@@ -296,36 +439,52 @@ def edit_student():
 @main.route('/remove-student', methods=['GET', 'POST'])
 @admin_required
 def remove_student():
-   if request.method == 'POST':
-       student_id_to_remove = request.form.get('student_id')
+    """Remove a student from the database.
 
-       # Make sure the student id was given
-       if not student_id_to_remove:
-           flash('Error: No student was selected.', 'danger')
-           return redirect(url_for('main.first_years'))
+    Deletes a student record permanently. The student's trip assignment
+    will be automatically cleared due to foreign key constraints.
 
-       # Find the student in the database
-       student = Student.query.get(student_id_to_remove)
+    Returns:
+        Response: Redirect to first-years page with success/error flash message.
+    """
+    if request.method == 'POST':
+        student_id_to_remove = request.form.get('student_id')
 
-       if student:
-           try:
-               # Delete the student
-               db.session.delete(student)
-               db.session.commit()
-               flash(f'Student {student.first_name} {student.last_name} was removed successfully.', 'success')
-           except Exception as e:
-               db.session.rollback()
-               flash(f'Error: Could not remove student. {str(e)}', 'danger')
-       else:
-           flash('Error: Student not found.', 'danger')
+        # Make sure the student id was given
+        if not student_id_to_remove:
+            flash('Error: No student was selected.', 'danger')
+            return redirect(url_for('main.first_years'))
 
-       return redirect(url_for('main.first_years'))
+        # Find the student in the database
+        student = Student.query.get(student_id_to_remove)
 
-   return redirect(url_for('main.first_years'))
+        if student:
+            try:
+                # Delete the student
+                db.session.delete(student)
+                db.session.commit()
+                flash(f'Student {student.first_name} {student.last_name} was removed successfully.',
+                    'success'
+                )
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error: Could not remove student. {str(e)}', 'danger')
+        else:
+            flash('Error: Student not found.', 'danger')
+        return redirect(url_for('main.first_years'))
+    return redirect(url_for('main.first_years'))
 
 @main.route('/add-trip', methods=['GET', 'POST'])
 @admin_required
 def add_trip():
+    """Add a new trip to the database.
+
+    Creates a new trip record with the provided information including
+    name, type, capacity, address, and activity flags (water/tent).
+
+    Returns:
+        Response: Redirect to trips page with success/error flash message.
+    """
     if request.method == 'POST':
         # Get required data from the form
         trip_name = request.form.get('trip_name')
@@ -334,7 +493,11 @@ def add_trip():
 
         # Make sure all required fields are there
         if not trip_name or not trip_type or not capacity:
-            flash('Error: One or more required fields (Trip Name, Trip Type, Capacity) are missing.', 'danger')
+            flash(
+                "Error: One or more required fields (Trip Name, Trip Type, Capacity) "
+                "are missing.",
+                "danger",
+            )
             return redirect(url_for('main.trips'))
 
         # Validate capacity is a positive integer
@@ -382,6 +545,14 @@ def add_trip():
 @main.route('/edit-trip', methods=['POST'])
 @admin_required
 def edit_trip():
+    """Edit an existing trip's information.
+
+    Updates a trip record with new information from the form. Validates
+    that trip_name is unique if changed and capacity is a positive integer.
+
+    Returns:
+        Response: Redirect to trips page with success/error flash message.
+    """
     trip_id = request.form.get('trip_id')
 
     if not trip_id:
@@ -438,38 +609,59 @@ def edit_trip():
 @main.route('/remove-trip', methods=['GET', 'POST'])
 @admin_required
 def remove_trip():
-   if request.method == 'POST':
-       trip_id_to_remove = request.form.get('trip_id')
+    """Remove a trip from the database.
 
-       # Make sure the trip id was given
-       if not trip_id_to_remove:
-           flash('Error: No trip was selected.', 'danger')
-           return redirect(url_for('main.trips'))
+    Deletes a trip record permanently. Student trip assignments will be
+    automatically set to NULL due to foreign key constraints (ondelete='SET NULL').
 
-       # Find the trip in the database
-       trip = Trip.query.get(trip_id_to_remove)
+    Returns:
+        Response: Redirect to trips page with success/error flash message.
+    """
+    if request.method == 'POST':
+        trip_id_to_remove = request.form.get('trip_id')
 
-       if trip:
-           try:
-               # Delete the trip - student trip placements will be set to NULL automatically
-               # by the foreign key constraint (ondelete='SET NULL')
-               trip_name = trip.trip_name
-               db.session.delete(trip)
-               db.session.commit()
-               flash(f'Trip {trip_name} was removed successfully. Student placements have been cleared.', 'success')
-           except Exception as e:
-               db.session.rollback()
-               flash(f'Error: Could not remove trip. {str(e)}', 'danger')
-       else:
-           flash('Error: Trip not found.', 'danger')
+        # Make sure the trip id was given
+        if not trip_id_to_remove:
+            flash('Error: No trip was selected.', 'danger')
+            return redirect(url_for('main.trips'))
 
-       return redirect(url_for('main.trips'))
+        # Find the trip in the database
+        trip = Trip.query.get(trip_id_to_remove)
 
-   return redirect(url_for('main.trips'))
+        if trip:
+            try:
+                # Delete the trip - student trip placements will be
+                # set to NULL automatically by the foreign key
+                # constraint (ondelete='SET NULL')
+                trip_name = trip.trip_name
+                db.session.delete(trip)
+                db.session.commit()
+                flash(
+                    f"Trip {trip_name} was removed successfully. "
+                    f"Student placements have been cleared.",
+                    "success",
+                )
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error: Could not remove trip. {str(e)}', 'danger')
+        else:
+            flash('Error: Trip not found.', 'danger')
+        return redirect(url_for('main.trips'))
+    return redirect(url_for('main.trips'))
 
 @main.route('/upload_csv', methods=['POST'])
 @admin_required
 def upload_csv():
+    """Upload and process a CSV file to import student data.
+
+    Accepts a CSV file with flexible column naming (case-insensitive,
+    handles spaces and hyphens). Automatically creates trips if trip_name
+    and trip_type are provided. Updates existing students or adds new ones.
+
+    Returns:
+        Response: Redirect to groups page with success/error flash message
+            including counts of added, updated, and skipped records.
+    """
     file = request.files.get('csv_file')
     if not file:
         flash('⚠️ No file selected.', 'danger')
@@ -481,6 +673,17 @@ def upload_csv():
 
         # Normalize column names (case-insensitive, strip whitespace)
         def normalize_key(key):
+            """Normalize a CSV column name for flexible matching.
+
+            Converts the key to lowercase, strips whitespace, and replaces
+            spaces and hyphens with underscores for consistent matching.
+
+            Args:
+                key (str): The column name to normalize.
+
+            Returns:
+                str: The normalized column name, or empty string if key is None.
+            """
             return key.strip().lower().replace(' ', '_').replace('-', '_') if key else ''
 
         # Create a mapping of normalized column names to actual column names
@@ -488,7 +691,20 @@ def upload_csv():
         column_map = {normalize_key(fn): fn for fn in fieldnames}
 
         def get_value(row, possible_keys):
-            """Get value from row using possible normalized keys"""
+            """Get a value from a CSV row using flexible column name matching.
+
+            Attempts to find a value in the row by trying multiple possible
+            column name variations. Uses normalized keys for case-insensitive
+            and format-flexible matching.
+
+            Args:
+                row (dict): The CSV row dictionary.
+                possible_keys (list): List of possible column name variations to try.
+
+            Returns:
+                str: The found value (stripped of whitespace), or empty string
+                    if no matching column is found.
+            """
             for key in possible_keys:
                 normalized = normalize_key(key)
                 if normalized in column_map:
@@ -503,14 +719,23 @@ def upload_csv():
         for row in csv_input:
             # Try multiple possible column name variations
             student_id = get_value(row, ['student_id', 'Student ID', 'student id', 'ID'])
-            first_name = get_value(row, ['first_name', 'First Name', 'first name', 'First', 'first'])
+            first_name = get_value(
+                row,
+                ['first_name', 'First Name', 'first name', 'First', 'first']
+            )
             last_name = get_value(row, ['last_name', 'Last Name', 'last name', 'Last', 'last'])
             email = get_value(row, ['email', 'Email', 'EMAIL', 'e-mail'])
             gender = get_value(row, ['gender', 'Gender', 'GENDER', 'sex', 'Sex'])
-            team = get_value(row, ['athletic_team', 'Athletic Team', 'athletic team', 'team', 'Team', 'sport'])
+            team = get_value(
+                row, ['athletic_team', 'Athletic Team', 'athletic team',
+                'team', 'Team', 'sport'],
+            )
             hometown = get_value(row, ['hometown', 'Hometown', 'Hometown', 'city', 'City'])
             dorm = get_value(row, ['dorm', 'Dorm', 'DORM', 'residence', 'Residence'])
-            water_comfort = get_value(row, ['water_comfort', 'Water Comfort', 'water comfort', 'water'])
+            water_comfort = get_value(
+                row,
+                ['water_comfort', 'Water Comfort', 'water comfort', 'water']
+            )
             tent_comfort = get_value(row, ['tent_comfort', 'Tent Comfort', 'tent comfort', 'tent'])
             trip_name = get_value(row, ['trip_name', 'Trip Name', 'trip name', 'Trip', 'trip'])
             trip_type = get_value(row, ['trip_type', 'Trip Type', 'trip type', 'Type', 'type'])
@@ -565,7 +790,11 @@ def upload_csv():
                 updated_count += 1
 
         db.session.commit()
-        flash(f"CSV uploaded successfully! Added: {added_count}, Updated: {updated_count}, Skipped: {skipped_count}", "success")
+        flash(
+            f"CSV uploaded successfully! Added: {added_count}, "
+            f"Updated: {updated_count}, Skipped: {skipped_count}",
+            "success",
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -576,6 +805,14 @@ def upload_csv():
 @main.route('/export_csv')
 @admin_required
 def export_csv():
+    """Export all student data to a CSV file.
+
+    Generates a CSV file containing all student records with their
+    complete information including trip assignments and preferences.
+
+    Returns:
+        Response: CSV file download with timestamped filename.
+    """
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -631,6 +868,14 @@ def export_csv():
 @main.route('/export_trip_csv')
 @admin_required
 def export_trip_csv():
+    """Export all trip data to a CSV file.
+
+    Generates a CSV file containing all trip records with their
+    complete information including capacity and activity flags.
+
+    Returns:
+        Response: CSV file download with timestamped filename.
+    """
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -662,6 +907,16 @@ def export_trip_csv():
 @main.route('/export_pdf')
 @admin_required
 def export_pdf():
+    """Export trip rosters to a PDF file.
+
+    Generates a multi-page PDF document with one page per trip showing
+    trip details and student rosters. Trips are sorted by number in
+    their name.
+
+    Returns:
+        Response: PDF file download with timestamped filename.
+            Returns error message with 500 status on failure.
+    """
     try:
         pdf_buffer = io.BytesIO()
         p = canvas.Canvas(pdf_buffer, pagesize=letter)
@@ -702,8 +957,13 @@ def export_pdf():
             y -= 15
 
             if trip.address:
-                # Clean address - remove newlines and special characters that don't render in PDF
-                clean_address = trip.address.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+                # Clean address - remove newlines and special
+                # characters that don't render in PDF
+                clean_address = (
+                    trip.address.replace('\n', ' ')
+                    .replace('\r', ' ')
+                    .replace('\t', ' ')
+                )
                 # Remove multiple spaces
                 clean_address = ' '.join(clean_address.split())
                 p.drawString(50, y, f"• Location: {clean_address}")
@@ -822,6 +1082,14 @@ def export_pdf():
 @main.route('/download_sample_csv')
 @admin_required
 def download_sample_csv():
+    """Download a sample CSV file template for student data import.
+
+    Provides a CSV file with example data showing the expected format
+    and column names for importing student data.
+
+    Returns:
+        Response: CSV file download with sample data.
+    """
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -832,8 +1100,14 @@ def download_sample_csv():
     ])
 
     sample_data = [
-        ['S001', 'John', 'Smith', 'john.smith@colby.edu', 'Male', 'Soccer', 'Dana', 'Portland ME', '4', '5', 'Trip 1', 'backpacking'],
-        ['S002', 'Jane', 'Doe', 'jane.doe@colby.edu', 'Female', 'Swimming', 'West', 'Boston MA', '5', '4', 'Trip 2', 'canoeing']
+        [
+            'S001', 'John', 'Smith', 'john.smith@colby.edu', 'Male',
+            'Soccer', 'Dana', 'Portland ME', '4', '5', 'Trip 1', 'backpacking'
+        ],
+        [
+            'S002', 'Jane', 'Doe', 'jane.doe@colby.edu', 'Female',
+            'Swimming', 'West', 'Boston MA', '5', '4', 'Trip 2', 'canoeing'
+        ],
     ]
 
     for row in sample_data:
@@ -849,6 +1123,16 @@ def download_sample_csv():
 @main.route('/sort-students', methods=['POST'])
 @admin_required
 def sort_students_route():
+    """Trigger automatic sorting of students into trips.
+
+    Runs the sorting algorithm to assign all students to trips based on
+    their preferences and constraints. Displays statistics about the
+    sorting results.
+
+    Returns:
+        Response: Redirect to groups page with success/error flash message
+            including sorting statistics.
+    """
     try:
         stats = sort_students()
         db.session.commit()
@@ -865,17 +1149,35 @@ def sort_students_route():
 @main.route('/clear-databases', methods=['POST'])
 @manager_required
 def clear_databases():
+    """Clear all student, trip, and non-admin user data from the database.
+
+    This is a destructive operation that permanently deletes all students,
+    trips, and users with role 'student' or None. Admin and admin_manager
+    users are preserved. Requires admin_manager role.
+
+    Returns:
+        Response: Redirect to settings page with success/error flash message
+            including counts of deleted records.
+    """
     try:
         # Delete all students and trips
         num_students = Student.query.delete()
         num_trips = Trip.query.delete()
 
         # Delete users with role 'student' or None
-        num_users = User.query.filter((User.role == 'student') | (User.role.is_(None))).delete(synchronize_session=False)
+        num_users = User.query.filter(
+            (User.role == 'student') |
+            (User.role.is_(None))
+        ).delete(synchronize_session=False)
+
 
         db.session.commit()
-        flash(f'🗑️ Cleared databases: {num_students} students, {num_trips} trips, and {num_users} users removed.', 'success')
+        flash(
+            f"Cleared databases: {num_students} students, {num_trips} trips, "
+            f"and {num_users} users removed.",
+            "success",
+        )
     except Exception as e:
         db.session.rollback()
-        flash(f'⚠️ Error clearing databases: {str(e)}', 'danger')
+        flash(f'Error clearing databases: {str(e)}', 'danger')
     return redirect(url_for('main.settings'))

@@ -1,11 +1,32 @@
-from website import db
-from .models import User, Student, Trip
+"""Database seeding utility for development and testing.
+
+This module provides functions to populate the database with fake data
+for development and testing purposes. Uses the Faker library to generate
+realistic test data for students and trips.
+"""
 import random
 from faker import Faker
+
+from website import db
+from .models import Student, Trip
 
 fake = Faker()
 
 def add_fake_data():
+    """Generate and add fake data to the database for development.
+
+    Creates fake trips and students with realistic distributions:
+    - 11 trips with various types (backpacking, canoeing, basecamp, etc.)
+    - 100 students with diverse attributes including:
+        - Gender distribution: 5% 'other', otherwise 50/50 male/female
+        - Athletic teams: 30% assigned to one of 30 teams
+        - Trip preferences: 3 unique preferences per student
+        - Comfort levels: 20% low comfort (1-2), 80% high comfort (3-5)
+        - POC and FLI flags: 20% each
+
+    Only adds data if the respective tables are empty. This prevents
+    duplicate data when called multiple times.
+    """
     # --- Admin ---
     # if not User.query.filter_by(email='admin@colby.edu').first():
     #     admin = User(email='admin@colby.edu', first_name='Admin', last_name='User', role='admin')
@@ -43,7 +64,6 @@ def add_fake_data():
 
     # --- Students ---
     if Student.query.count() == 0:
-        trip_ids = [trip.id for trip in Trip.query.all()]
         teams = [f"Team {i}" for i in range(1, 31)]
 
         for i in range(100):
