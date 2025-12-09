@@ -70,7 +70,7 @@ def create_app():
         Returns:
             User: The User object if found, None otherwise.
         """
-        return User.query.get(email)
+        return db.session.get(User, email)
 
     app.register_blueprint(main)
     app.register_blueprint(auth_blueprint)

@@ -92,6 +92,10 @@
                         <div class="card-body">
                             <div class="d-grid gap-3 d-sm-flex justify-content-sm-center flex-wrap">
 
+                                <button type="button" class="btn btn-info btn-lg" data-bs-toggle="modal" data-bs-target="#userGuideModal">
+                                    <i class="fas fa-book me-2"></i> User Guide
+                                </button>
+
                                 <a href="#" id="toggleTripsVisibilityBtn" class="btn btn-secondary btn-lg">
                                     <i class="fas fa-eye me-2"></i> Toggle Trip Visibility
                                 </a>
@@ -266,6 +270,354 @@
                         <div class="alert alert-info small mt-4" role="alert">
                             <i class="fas fa-info-circle me-1"></i>
                             When enabled, students will be able to view trip information.
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Guide Modal -->
+        <div class="modal fade" id="userGuideModal" tabindex="-1" aria-labelledby="userGuideModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white">
+                        <h5 class="modal-title" id="userGuideModalLabel">
+                            <i class="fas fa-book me-2"></i> User Guide
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="accordion" id="guideAccordion">
+                            <!-- Trips Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingTrips">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTrips" aria-expanded="true" aria-controls="collapseTrips">
+                                        <i class="fas fa-route me-2"></i> <strong>Trips Management</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseTrips" class="accordion-collapse collapse show" aria-labelledby="headingTrips" data-bs-parent="#guideAccordion">
+                                    <div class="accordion-body">
+                                        <h6>Viewing Trips</h6>
+                                        <p>Navigate to the <strong>Trips</strong> page from the sidebar to see all available trips. The table displays:</p>
+                                        <ul>
+                                            <li>Trip name and type</li>
+                                            <li>Capacity and current enrollment</li>
+                                            <li>Water and tent requirements</li>
+                                            <li>Trip address</li>
+                                        </ul>
+                                        
+                                        <h6 class="mt-3">Adding a Trip</h6>
+                                        <ol>
+                                            <li>Click the <strong>"+ Add a trip"</strong> button</li>
+                                            <li>Fill in the required fields:
+                                                <ul>
+                                                    <li>Trip Name (e.g., "Maine Adventure")</li>
+                                                    <li>Trip Type (backpacking, canoeing, basecamp, etc.)</li>
+                                                    <li>Capacity (maximum number of students)</li>
+                                                </ul>
+                                            </li>
+                                            <li>Optionally set water and tent requirements</li>
+                                            <li>Click <strong>"Save Trip"</strong></li>
+                                        </ol>
+
+                                        <h6 class="mt-3">Editing a Trip</h6>
+                                        <p>Click the <strong>Edit</strong> button next to any trip to modify its details.</p>
+
+                                        <h6 class="mt-3">Removing a Trip</h6>
+                                        <p>Click the <strong>"- Remove"</strong> button, select the trip, and confirm removal. Note: Students assigned to the trip will be unassigned.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- First Years Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingFirstYears">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFirstYears" aria-expanded="false" aria-controls="collapseFirstYears">
+                                        <i class="fas fa-user-plus me-2"></i> <strong>First Years (Student Management)</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseFirstYears" class="accordion-collapse collapse" aria-labelledby="headingFirstYears" data-bs-parent="#guideAccordion">
+                                    <div class="accordion-body">
+                                        <h6>Viewing Students</h6>
+                                        <p>The <strong>First Years</strong> page displays all students in a searchable, sortable table. You can see:</p>
+                                        <ul>
+                                            <li>Student ID, name, and email</li>
+                                            <li>Assigned trip and preferences</li>
+                                            <li>Dorm, athletic team, gender</li>
+                                            <li>Comfort levels, notes, and allergies/dietary restrictions</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Adding a Student</h6>
+                                        <ol>
+                                            <li>Click <strong>"+ Add a student"</strong></li>
+                                            <li>Fill in required fields:
+                                                <ul>
+                                                    <li>Student ID (unique identifier)</li>
+                                                    <li>Email (must be unique)</li>
+                                                    <li>First Name and Last Name</li>
+                                                </ul>
+                                            </li>
+                                            <li>Optionally add:
+                                                <ul>
+                                                    <li>Trip preferences (1st, 2nd, 3rd choice)</li>
+                                                    <li>Dorm, athletic team, gender</li>
+                                                    <li>Water and tent comfort levels (1-5)</li>
+                                                    <li>Hometown, notes, allergies/dietary restrictions</li>
+                                                    <li>POC and FLI International flags</li>
+                                                </ul>
+                                            </li>
+                                            <li>Optionally assign to a trip immediately</li>
+                                            <li>Click <strong>"Save Student"</strong></li>
+                                        </ol>
+
+                                        <h6 class="mt-3">Editing a Student</h6>
+                                        <p>Click the <strong>Edit</strong> button in the Actions column to modify any student's information.</p>
+
+                                        <h6 class="mt-3">Removing a Student</h6>
+                                        <p>Click <strong>"- Remove"</strong>, select the student, and confirm removal.</p>
+
+                                        <h6 class="mt-3">Search and Filter</h6>
+                                        <p>Use the search box at the top right to quickly find students by any field. The table supports sorting by clicking column headers.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Groups Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingGroups">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGroups" aria-expanded="false" aria-controls="collapseGroups">
+                                        <i class="fas fa-users me-2"></i> <strong>Groups (Trip Assignments)</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseGroups" class="accordion-collapse collapse" aria-labelledby="headingGroups" data-bs-parent="#guideAccordion">
+                                    <div class="accordion-body">
+                                        <h6>Viewing Groups</h6>
+                                        <p>The <strong>Groups</strong> page shows all trips with their assigned students. Each trip card displays:</p>
+                                        <ul>
+                                            <li>Trip name, type, and capacity</li>
+                                            <li>Current enrollment count</li>
+                                            <li>Validation status indicators</li>
+                                            <li>List of assigned students with key information</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Trip Validation</h6>
+                                        <p>Each trip shows validation status for:</p>
+                                        <ul>
+                                            <li><strong>Gender Balance:</strong> Ensures appropriate gender distribution</li>
+                                            <li><strong>Athletic Teams:</strong> Prevents too many students from the same team</li>
+                                            <li><strong>Dorm Separation:</strong> Separates roommates/dormmates</li>
+                                            <li><strong>Water Comfort:</strong> Matches students' comfort levels with trip requirements</li>
+                                            <li><strong>Tent Comfort:</strong> Ensures students are comfortable with tent camping</li>
+                                        </ul>
+                                        <p class="text-info"><i class="fas fa-info-circle me-1"></i> Green checkmarks indicate valid groups, while warnings highlight potential issues.</p>
+
+                                        <h6 class="mt-3">Filtering and Searching</h6>
+                                        <p>Use the filter button to search trips by name or type. The search box allows quick filtering of displayed trips.</p>
+
+                                        <h6 class="mt-3">Sort Students</h6>
+                                        <p>Click the <strong>"Sort Students"</strong> button to automatically assign unassigned students to trips based on preferences and validation rules.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Student Assignment Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingAssignment">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAssignment" aria-expanded="false" aria-controls="collapseAssignment">
+                                        <i class="fas fa-exchange-alt me-2"></i> <strong>Moving and Swapping Students</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseAssignment" class="accordion-collapse collapse" aria-labelledby="headingAssignment" data-bs-parent="#guideAccordion">
+                                    <div class="accordion-body">
+                                        <h6>Moving a Student</h6>
+                                        <ol>
+                                            <li>Go to the <strong>First Years</strong> page</li>
+                                            <li>Click <strong>"Move Students"</strong></li>
+                                            <li>Select the student you want to move</li>
+                                            <li>Choose the destination trip from the dropdown</li>
+                                            <li>Click <strong>"Move Student"</strong></li>
+                                        </ol>
+                                        <p class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i> The student will be removed from their current trip and assigned to the new one.</p>
+
+                                        <h6 class="mt-3">Swapping Two Students</h6>
+                                        <ol>
+                                            <li>Go to the <strong>First Years</strong> page</li>
+                                            <li>Click <strong>"Swap Students"</strong></li>
+                                            <li>Select the first student from the dropdown</li>
+                                            <li>Select the second student from the dropdown</li>
+                                            <li>Click <strong>"Swap Students"</strong></li>
+                                        </ol>
+                                        <p class="text-info"><i class="fas fa-info-circle me-1"></i> This exchanges the trips of two students. Useful for balancing groups or resolving conflicts.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- CSV Import Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingCSV">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCSV" aria-expanded="false" aria-controls="collapseCSV">
+                                        <i class="fas fa-file-csv me-2"></i> <strong>CSV Import</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseCSV" class="accordion-collapse collapse" aria-labelledby="headingCSV" data-bs-parent="#guideAccordion">
+                                    <div class="accordion-body">
+                                        <h6>Uploading a CSV File</h6>
+                                        <ol>
+                                            <li>Go to the <strong>First Years</strong> page</li>
+                                            <li>Click <strong>"Upload CSV"</strong></li>
+                                            <li>Select your CSV file</li>
+                                            <li>Click <strong>"Upload"</strong></li>
+                                        </ol>
+
+                                        <h6 class="mt-3">CSV Format</h6>
+                                        <p>Your CSV file should include the following columns (required fields marked with *):</p>
+                                        <ul>
+                                            <li><strong>student_id*</strong> - Unique student identifier</li>
+                                            <li><strong>first_name*</strong> - Student's first name</li>
+                                            <li><strong>last_name*</strong> - Student's last name</li>
+                                            <li><strong>email*</strong> - Student's email address</li>
+                                            <li><strong>trip_name</strong> - Name of assigned trip (will create trip if doesn't exist)</li>
+                                            <li><strong>trip_type</strong> - Type of trip (required if trip_name is provided)</li>
+                                            <li><strong>trip_pref_1, trip_pref_2, trip_pref_3</strong> - Trip preferences</li>
+                                            <li><strong>dorm</strong> - Dorm name/number</li>
+                                            <li><strong>athletic_team</strong> - Athletic team name</li>
+                                            <li><strong>gender</strong> - male, female, nonbinary, or other</li>
+                                            <li><strong>water_comfort</strong> - 1-5 scale</li>
+                                            <li><strong>tent_comfort</strong> - 1-5 scale</li>
+                                            <li><strong>hometown</strong> - Student's hometown</li>
+                                            <li><strong>notes</strong> - Additional notes</li>
+                                            <li><strong>allergies_dietary_restrictions</strong> - Allergies or dietary restrictions</li>
+                                            <li><strong>poc</strong> - true/false or yes/no</li>
+                                            <li><strong>fli_international</strong> - true/false or yes/no</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Import Behavior</h6>
+                                        <ul>
+                                            <li>If a student with the same <strong>student_id</strong> exists, their information will be updated</li>
+                                            <li>If a student doesn't exist, a new record will be created</li>
+                                            <li>If a trip name doesn't exist, a new trip will be created (requires trip_type)</li>
+                                            <li>Rows with missing required fields will be skipped</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Advanced CSV Import (Column Mapping)</h6>
+                                        <p>For CSV files with different column names:</p>
+                                        <ol>
+                                            <li>Click <strong>"Upload CSV"</strong></li>
+                                            <li>Select your file</li>
+                                            <li>Map your CSV columns to the system fields using the dropdown menus</li>
+                                            <li>Choose import mode: <strong>Add New</strong> or <strong>Update Existing</strong></li>
+                                            <li>Click <strong>"Import"</strong></li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Settings Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingSettings">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSettings" aria-expanded="false" aria-controls="collapseSettings">
+                                        <i class="fas fa-cog me-2"></i> <strong>Settings & Permissions</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseSettings" class="accordion-collapse collapse" aria-labelledby="headingSettings" data-bs-parent="#guideAccordion">
+                                    <div class="accordion-body">
+                                        <h6>User Roles</h6>
+                                        <p>The system has different access levels:</p>
+                                        <ul>
+                                            <li><strong>Admin Manager:</strong> Full access including user management and database clearing</li>
+                                            <li><strong>Admin:</strong> Can manage trips, students, and assignments</li>
+                                            <li><strong>Student:</strong> Limited view-only access to their own information</li>
+                                            <li><strong>None:</strong> No access to the system</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Editing User Permissions</h6>
+                                        <p class="text-warning"><i class="fas fa-exclamation-triangle me-1"></i> Only Admin Managers can edit user roles.</p>
+                                        <ol>
+                                            <li>Click <strong>"Edit Access Permissions"</strong></li>
+                                            <li>View all users in the system</li>
+                                            <li>Click <strong>Edit</strong> next to a user</li>
+                                            <li>Select their new role from the dropdown</li>
+                                            <li>Click <strong>"Save Changes"</strong></li>
+                                        </ol>
+
+                                        <h6 class="mt-3">Adding New Admins</h6>
+                                        <p>To add a new admin:</p>
+                                        <ol>
+                                            <li>The user must first sign in to the app with their Google account</li>
+                                            <li>Once they appear in the users list, an Admin Manager can assign them the appropriate role</li>
+                                        </ol>
+
+                                        <h6 class="mt-3">Toggle Trip Visibility</h6>
+                                        <p>Control whether students can see trip information:</p>
+                                        <ol>
+                                            <li>Click <strong>"Toggle Trip Visibility"</strong></li>
+                                            <li>Use the switch to enable or disable trip visibility for students</li>
+                                        </ol>
+
+                                        <h6 class="mt-3">Clearing Databases</h6>
+                                        <p class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i> <strong>WARNING:</strong> This action cannot be undone!</p>
+                                        <p>Only Admin Managers can clear all databases. This will remove:</p>
+                                        <ul>
+                                            <li>All students</li>
+                                            <li>All trips</li>
+                                            <li>All assignments</li>
+                                        </ul>
+                                        <p>To clear databases:</p>
+                                        <ol>
+                                            <li>Click <strong>"Clear Databases"</strong></li>
+                                            <li>Type <strong>CONFIRM</strong> in the confirmation field</li>
+                                            <li>Click <strong>"Yes, Clear Databases"</strong></li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Tips & Best Practices Section -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="headingTips">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTips" aria-expanded="false" aria-controls="collapseTips">
+                                        <i class="fas fa-lightbulb me-2"></i> <strong>Tips & Best Practices</strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseTips" class="accordion-collapse collapse" aria-labelledby="headingTips" data-bs-parent="#guideAccordion">
+                                    <div class="accordion-body">
+                                        <h6>General Tips</h6>
+                                        <ul>
+                                            <li><strong>Use CSV import</strong> for bulk student uploads to save time</li>
+                                            <li><strong>Check validation status</strong> on the Groups page to ensure balanced trip assignments</li>
+                                            <li><strong>Use the search function</strong> to quickly find students or trips</li>
+                                            <li><strong>Review trip preferences</strong> when manually assigning students</li>
+                                            <li><strong>Use "Sort Students"</strong> to automatically assign unassigned students based on preferences</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Data Entry</h6>
+                                        <ul>
+                                            <li>Always fill in <strong>water_comfort</strong> and <strong>tent_comfort</strong> levels (1-5) for better trip matching</li>
+                                            <li>Record <strong>allergies and dietary restrictions</strong> to ensure student safety</li>
+                                            <li>Keep <strong>dorm information</strong> accurate for roommate separation validation</li>
+                                            <li>Update <strong>athletic team</strong> information to prevent team clustering</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Troubleshooting</h6>
+                                        <ul>
+                                            <li>If a student can't be added, check that their <strong>student_id</strong> and <strong>email</strong> are unique</li>
+                                            <li>If validation warnings appear, use <strong>Move</strong> or <strong>Swap</strong> to rebalance groups</li>
+                                            <li>If CSV import fails, check that required columns are present and properly formatted</li>
+                                            <li>Clear your browser cache if the page doesn't update after changes</li>
+                                        </ul>
+
+                                        <h6 class="mt-3">Keyboard Shortcuts</h6>
+                                        <ul>
+                                            <li>Use <strong>Tab</strong> to navigate between form fields</li>
+                                            <li>Press <strong>Enter</strong> to submit forms</li>
+                                            <li>Use <strong>Ctrl+F</strong> (or Cmd+F on Mac) to search within the page</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">

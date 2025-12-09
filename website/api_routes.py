@@ -313,6 +313,7 @@ def process_matched_csv():
             'student_id', 'first_name', 'last_name', 'email', 'trip_id',
             'trip_pref_1', 'trip_pref_2', 'trip_pref_3', 'dorm',
             'athletic_team', 'gender', 'notes', 'water_comfort',
+            'allergies_dietary_restrictions',
             'tent_comfort', 'hometown', 'poc', 'fli_international'
         }
 
