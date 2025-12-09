@@ -172,6 +172,7 @@ window.addEventListener('DOMContentLoaded', function() {
         $('#athletic_team').val(studentData.athletic_team || '');
         $('#hometown').val(studentData.hometown || '');
         $('#notes').val(studentData.notes || '');
+        $('#allergies_dietary_restrictions').val(studentData.allergies_dietary_restrictions || '');
 
         // Set checkboxes
         $('#poc').prop('checked', studentData.poc === true || studentData.poc === 'true');

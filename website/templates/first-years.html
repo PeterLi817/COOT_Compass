@@ -103,6 +103,7 @@
                                             <th>Water Comfort</th>
                                             <th>Tent Comfort</th>
                                             <th>Notes</th>
+                                            <th>Allergies & Dietary Restrictions</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -126,6 +127,7 @@
                                             <td>{{ student.water_comfort or '' }}</td>
                                             <td>{{ student.tent_comfort or '' }}</td>
                                             <td>{{ student.notes or 'N/A' }}</td>
+                                            <td>{{ student.allergies_dietary_restrictions or 'N/A' }}</td>
                                             <td>
                                                 <button class="btn btn-sm btn-primary edit-student-btn"
                                                         data-student-id="{{ student.id }}"
@@ -280,6 +282,10 @@
                             <div class="mb-3">
                                 <label for="notes" class="form-label">Notes</label>
                                 <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="allergies_dietary_restrictions" class="form-label">Allergies & Dietary Restrictions</label>
+                                <textarea class="form-control" id="allergies_dietary_restrictions" name="allergies_dietary_restrictions" rows="2" placeholder="Enter any allergies or dietary restrictions"></textarea>
                             </div>
                             <small class="text-muted">Fields marked with * are required.</small>
                         </div>

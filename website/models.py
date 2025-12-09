@@ -59,6 +59,7 @@ class Student(db.Model):
     hometown = db.Column(db.String(100))
     poc = db.Column(db.Boolean)
     fli_international = db.Column(db.Boolean)
+    allergies_dietary_restrictions = db.Column(db.Text)
 
     # One-to-one with User (nullable since not all students may have accounts).
     # NOTE: There is also a separate 'email' field for the student's own email address.
