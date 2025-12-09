@@ -37,7 +37,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(email):
-        return User.query.get(email)
+        return db.session.get(User, email)
 
     app.register_blueprint(main)
     app.register_blueprint(auth_blueprint)
