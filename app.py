@@ -1,50 +1,12 @@
-from flask import Flask
-from views import main
-from models import User, db
-from fill_db import add_fake_data #for development purposes
-from auth import auth_blueprint
-from api_routes import api
-from flask_login import LoginManager
-from auth import init_oauth
-import os
-from dotenv import load_dotenv
+"""Main application entry point for COOT Compass.
 
-load_dotenv()
+This module initializes the Flask application and serves as the entry point
+for running the application in development mode.
+"""
 
-SECRET_KEY = os.getenv('SECRET_KEY')
-# print(SECRET_KEY)
-ENVIRONMENT = os.getenv('ENVIRONMENT')
-SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
-if ENVIRONMENT == 'production' and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
-    SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
+from website import create_app
 
-app = Flask(__name__)
-if not SECRET_KEY:
-    raise ValueError("SECRET_KEY environment variable must be set")
-app.config['SECRET_KEY'] = SECRET_KEY
-app.config['SQLALCHEMY_DATABASE_URI'] = SQLALCHEMY_DATABASE_URI
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db.init_app(app)
+app = create_app()
 
-login_manager = LoginManager(app)
-login_manager.login_message = ''  # Disable default flash message
-login_manager.login_view = 'auth.login_page'  # public login page, not protected
-init_oauth(app)
-
-@login_manager.user_loader
-def load_user(email):
-    return User.query.get(email)
-
-app.register_blueprint(main)
-app.register_blueprint(auth_blueprint)
-app.register_blueprint(api)
-
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()  # Create database tables
-        add_fake_data()
-
-    app.run(debug=True, port=5000)
-else:
-    with app.app_context():
-        db.create_all()  # Create database tables
+if __name__ == '__main__':
+    app.run()

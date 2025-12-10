@@ -74,7 +74,7 @@ $(document).ready(function() {
             $('#viewUsersModal').modal('show');
 
             // Fetch users from the backend
-            fetch('/get-users')
+            fetch('/api/get-users')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Failed to fetch users');
@@ -135,7 +135,21 @@ $(document).ready(function() {
     $('#confirmClearDB').on('click', function() {
         const inputValue = $('#confirmTextInput').val();
         if (inputValue.toUpperCase() === 'CONFIRM') {
-            fetch(`clear-databases`, { method: 'POST' });
+            fetch(`/clear-databases`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    alert('Error clearing databases. Check console for details.');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('Error clearing databases.');
+            });
             $('#confirmClearDBModal').modal('hide');
         }
     });
@@ -165,7 +179,7 @@ $(document).ready(function() {
         const newRole = $('#roleSelect').val();
 
         // Send update request to backend
-        fetch('/update-user-role', {
+        fetch('/api/update-user-role', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -192,32 +206,40 @@ $(document).ready(function() {
         renderUsers();
     });
 
+    // Handle Toggle Trip Visibility button click
+    $('#toggleTripsVisibilityBtn').on('click', function(e) {
+        e.preventDefault();
+
+        if (!isManager) {
+            // Show permission denied modal
+            $('#permissionDeniedModal').modal('show');
+        } else {
+            // Show the toggle trips visibility modal
+            $('#toggleTripsVisibilityModal').modal('show');
+        }
+    });
+
     // Show Trips switch handling
     const $showTripsSwitch = $('#showTripsSwitch');
 
     if ($showTripsSwitch.length) {
-        // Initialize switch state from backend
-        fetch('/api/settings/show_trips')
-            .then(resp => resp.json())
-            .then(data => {
-                const isOn = !!data.show_trips_to_students;
-                $showTripsSwitch.prop('checked', isOn);
-                $showTripsSwitch.attr('aria-checked', !!isOn);
-            })
-            .catch(err => {
-                console.error('Error fetching show_trips setting:', err);
-            });
+        // Initialize switch state from backend when modal is shown
+        $('#toggleTripsVisibilityModal').on('show.bs.modal', function() {
+            fetch('/api/settings/show_trips')
+                .then(resp => resp.json())
+                .then(data => {
+                    const isOn = !!data.show_trips_to_students;
+                    $showTripsSwitch.prop('checked', isOn);
+                    $showTripsSwitch.attr('aria-checked', !!isOn);
+                })
+                .catch(err => {
+                    console.error('Error fetching show_trips setting:', err);
+                });
+        });
 
         // Toggle handler
         $showTripsSwitch.on('change', function() {
             const checked = $(this).is(':checked');
-
-            if (!isManager) {
-                // Only managers may toggle in UI; revert and show modal
-                $(this).prop('checked', !checked);
-                $('#permissionDeniedModal').modal('show');
-                return;
-            }
 
             fetch('/api/settings/toggle_show_trips', {
                 method: 'POST',

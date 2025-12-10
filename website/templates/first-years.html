@@ -73,6 +73,9 @@
                                 <i class="fas fa-plus me-1"></i> Add a student
                             </button>
                             <button class="btn btn-navy" type="button" data-bs-toggle="modal" data-bs-target="#removeStudentModal">- Remove a student</button>
+                            <form action="{{ url_for('main.export_csv') }}" method="GET" style="display:inline;">
+                                <button class="btn btn-navy" type="submit">Export to CSV</button>
+                            </form>
                         </div>
                         <div class="card mb-4">
                             <div class="card-header">
@@ -100,6 +103,7 @@
                                             <th>Water Comfort</th>
                                             <th>Tent Comfort</th>
                                             <th>Notes</th>
+                                            <th>Allergies & Dietary Restrictions</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -123,6 +127,7 @@
                                             <td>{{ student.water_comfort or '' }}</td>
                                             <td>{{ student.tent_comfort or '' }}</td>
                                             <td>{{ student.notes or 'N/A' }}</td>
+                                            <td>{{ student.allergies_dietary_restrictions or 'N/A' }}</td>
                                             <td>
                                                 <button class="btn btn-sm btn-primary edit-student-btn"
                                                         data-student-id="{{ student.id }}"
@@ -278,6 +283,10 @@
                                 <label for="notes" class="form-label">Notes</label>
                                 <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                             </div>
+                            <div class="mb-3">
+                                <label for="allergies_dietary_restrictions" class="form-label">Allergies & Dietary Restrictions</label>
+                                <textarea class="form-control" id="allergies_dietary_restrictions" name="allergies_dietary_restrictions" rows="2" placeholder="Enter any allergies or dietary restrictions"></textarea>
+                            </div>
                             <small class="text-muted">Fields marked with * are required.</small>
                         </div>
                         <div class="modal-footer">
@@ -349,15 +358,43 @@
                 <h5 class="modal-title" id="uploadCSVModalLabel">Upload CSV File</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form id="csvMatchingForm" method="POST" enctype="multipart/form-data" action="{{ url_for('main.process_matched_csv') }}">
+                <form id="csvMatchingForm" method="POST" enctype="multipart/form-data" action="{{ url_for('api.process_matched_csv') }}">
                 <div class="modal-body">
+                    <!-- Instructions Section -->
+                    <div class="alert alert-info" role="alert">
+                        <h6 class="alert-heading"><i class="fas fa-info-circle"></i> How to Upload a CSV</h6>
+                        <ol class="mb-0" style="padding-left: 1.2rem; font-size: 0.9rem;">
+                            <li><strong>Select your CSV file</strong> using the file picker below</li>
+                            <li><strong>Review the automatic column matching</strong> - the system will try to match your CSV columns to database fields</li>
+                            <li><strong>Adjust any incorrect mappings</strong> using the dropdown menus (or select "Skip Column" to ignore a column)</li>
+                            <li><strong>Choose an action:</strong>
+                                <ul style="margin-top: 0.3rem;">
+                                    <li><em>Add New Students</em> - Only creates new records (skips if Student ID already exists)</li>
+                                    <li><em>Update Existing Students</em> - Updates existing records based on Student ID</li>
+                                </ul>
+                            </li>
+                            <li><strong>Click "Upload CSV"</strong> to import your data</li>
+                        </ol>
+                        <hr style="margin: 0.75rem 0;">
+                        <small class="text-muted">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Required fields:</strong> Student ID, First Name, Last Name, and Email must be included in your CSV.
+                        </small>
+                    </div>
+
                     <div class="mb-3">
-                        <label for="csv_file" class="form-label">Select CSV File</label>
+                        <label for="csv_file" class="form-label"><strong>Select CSV File</strong></label>
                         <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv" required>
+                        <small class="form-text text-muted">Your CSV file can have any column names - you'll map them to our database fields in the next step.</small>
                     </div>
 
                     <div id="columnMatchingContainer" style="display: none;">
-                        <h6 class="mb-3">Match CSV Columns to Database Fields</h6>
+                        <hr class="my-4">
+                        <h6 class="mb-2"><i class="fas fa-columns"></i> Match CSV Columns to Database Fields</h6>
+                        <p class="text-muted" style="font-size: 0.9rem;">
+                            For each column in your CSV, select the corresponding database field from the dropdown.
+                            The system has automatically suggested matches based on your column names.
+                            Select <strong>"-- Skip Column --"</strong> for any columns you don't want to import.
+                        </p>
                         <div id="matchingRows"></div>
                     </div>
                 </div>

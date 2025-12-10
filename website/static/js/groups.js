@@ -347,6 +347,10 @@ function setupAPIIntegration() {
                     alert('Please select a unique sort criterion for each priority.');
                     return;
                 }
+
+                // Show loading state
+                showSortingLoadingState();
+
                 // Use the global API client if available
                 if (window.cootAPI && window.cootAPI.sortStudents) {
                     window.cootAPI.sortStudents(criteria)
@@ -354,10 +358,12 @@ function setupAPIIntegration() {
                             if (data.success) {
                                 window.location.reload();
                             } else {
+                                hideSortingLoadingState();
                                 alert('Sort failed: ' + (data.message || 'Unknown error'));
                             }
                         })
                         .catch(err => {
+                            hideSortingLoadingState();
                             alert('Sort failed: ' + err.message);
                         });
                 } else {
@@ -375,15 +381,50 @@ function setupAPIIntegration() {
                         if (data.success) {
                             window.location.reload();
                         } else {
+                            hideSortingLoadingState();
                             alert('Sort failed: ' + (data.message || 'Unknown error'));
                         }
                     })
                     .catch(err => {
+                        hideSortingLoadingState();
                         alert('Sort failed: ' + err.message);
                     });
                 }
             });
         }
+    }
+}
+
+// Loading state functions for sort button
+function showSortingLoadingState() {
+    const sortBtn = document.getElementById('sortStudentsBtn');
+    const sortBtnText = document.getElementById('sortBtnText');
+    const modal = bootstrap.Modal.getInstance(document.getElementById('confirmSortStudentsModal'));
+
+    if (sortBtn) {
+        sortBtn.disabled = true;
+        sortBtn.classList.add('disabled');
+    }
+    if (sortBtnText) {
+        sortBtnText.textContent = 'Sorting...';
+    }
+
+    // Close the modal
+    if (modal) {
+        modal.hide();
+    }
+}
+
+function hideSortingLoadingState() {
+    const sortBtn = document.getElementById('sortStudentsBtn');
+    const sortBtnText = document.getElementById('sortBtnText');
+
+    if (sortBtn) {
+        sortBtn.disabled = false;
+        sortBtn.classList.remove('disabled');
+    }
+    if (sortBtnText) {
+        sortBtnText.textContent = 'Sort Students';
     }
 }
 

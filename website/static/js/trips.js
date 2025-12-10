@@ -181,7 +181,7 @@ window.addEventListener('DOMContentLoaded', function() {
 
         const actionLabel = document.createElement('label');
         actionLabel.className = 'form-label';
-        actionLabel.textContent = 'Action';
+        actionLabel.innerHTML = '<strong>Action</strong>';
 
         const actionSelect = document.createElement('select');
         actionSelect.className = 'form-select';
