@@ -36,11 +36,11 @@ def create_app():
     app = Flask(__name__)
 
     from .views import main # pylint: disable=import-outside-toplevel
-    from .models import User, db # pylint: disable=import-outside-toplevel
     from .fill_db import add_fake_data #for development purposes
     from .auth import auth_blueprint, init_oauth # pylint: disable=import-outside-toplevel
     from .api_routes import api # pylint: disable=import-outside-toplevel
     from flask_login import LoginManager # pylint: disable=import-outside-toplevel
+    from .models import User, Student, Trip, AppSettings # pylint: disable=import-outside-toplevel
 
     if not SECRET_KEY:
         raise ValueError("SECRET_KEY environment variable must be set")
