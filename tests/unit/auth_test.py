@@ -3,10 +3,10 @@
 Tests focus on isolated function behavior using mocks and stubs,
 without requiring full application context or database connections.
 """
+from unittest.mock import patch, Mock
+
 import pytest
-from unittest.mock import patch, MagicMock, Mock
 from website.auth import get_user, create_new_user, init_oauth
-from website.models import User, Student
 
 
 class TestGetUser:
@@ -58,7 +58,8 @@ class TestCreateNewUser:
     @patch('website.auth.db')
     @patch('website.auth.Student')
     @patch('website.auth.User')
-    def test_create_user_without_student_record(self, mock_user_model, mock_student_model, mock_db):
+    def test_create_user_without_student_record(
+            self, mock_user_model, mock_student_model, mock_db):
         """Test creating a new user when no Student record exists."""
         # Mock Student.query to return None (no student record)
         mock_student_model.query.filter_by.return_value.first.return_value = None
@@ -171,7 +172,8 @@ class TestCreateNewUser:
     @patch('website.auth.db')
     @patch('website.auth.Student')
     @patch('website.auth.User')
-    def test_create_user_queries_student_by_email(self, mock_user_model, mock_student_model, mock_db):
+    def test_create_user_queries_student_by_email(
+            self, mock_user_model, mock_student_model, _mock_db):
         """Test that create_new_user queries Student table with correct email."""
         mock_student_model.query.filter_by.return_value.first.return_value = None
         mock_user_model.return_value = Mock()
@@ -195,10 +197,11 @@ class TestInitOAuth:
     def test_init_oauth_with_valid_credentials(self, mock_getenv, mock_oauth):
         """Test init_oauth successfully registers Google provider with valid credentials."""
         mock_app = Mock()
-        mock_getenv.side_effect = lambda key: {
+        credentials = {
             'GOOGLE_CLIENT_ID': 'test_client_id',
             'GOOGLE_CLIENT_SECRET': 'test_client_secret'
-        }.get(key)
+        }
+        mock_getenv.side_effect = credentials.get
 
         init_oauth(mock_app)
 
@@ -213,13 +216,14 @@ class TestInitOAuth:
 
     @patch('website.auth.oauth')
     @patch('os.getenv')
-    def test_init_oauth_missing_client_id(self, mock_getenv, mock_oauth):
+    def test_init_oauth_missing_client_id(self, mock_getenv, _mock_oauth):
         """Test that init_oauth raises ValueError when GOOGLE_CLIENT_ID is missing."""
         mock_app = Mock()
-        mock_getenv.side_effect = lambda key: {
+        credentials = {
             'GOOGLE_CLIENT_ID': None,
             'GOOGLE_CLIENT_SECRET': 'test_secret'
-        }.get(key)
+        }
+        mock_getenv.side_effect = credentials.get
 
         with pytest.raises(ValueError) as exc_info:
             init_oauth(mock_app)
@@ -228,13 +232,14 @@ class TestInitOAuth:
 
     @patch('website.auth.oauth')
     @patch('os.getenv')
-    def test_init_oauth_missing_client_secret(self, mock_getenv, mock_oauth):
+    def test_init_oauth_missing_client_secret(self, mock_getenv, _mock_oauth):
         """Test that init_oauth raises ValueError when GOOGLE_CLIENT_SECRET is missing."""
         mock_app = Mock()
-        mock_getenv.side_effect = lambda key: {
+        credentials = {
             'GOOGLE_CLIENT_ID': 'test_id',
             'GOOGLE_CLIENT_SECRET': None
-        }.get(key)
+        }
+        mock_getenv.side_effect = credentials.get
 
         with pytest.raises(ValueError) as exc_info:
             init_oauth(mock_app)
@@ -243,7 +248,7 @@ class TestInitOAuth:
 
     @patch('website.auth.oauth')
     @patch('os.getenv')
-    def test_init_oauth_missing_both_credentials(self, mock_getenv, mock_oauth):
+    def test_init_oauth_missing_both_credentials(self, mock_getenv, _mock_oauth):
         """Test that init_oauth raises ValueError when both credentials are missing."""
         mock_app = Mock()
         mock_getenv.return_value = None
@@ -258,10 +263,11 @@ class TestInitOAuth:
     def test_init_oauth_sets_correct_scopes(self, mock_getenv, mock_oauth):
         """Test that init_oauth configures correct OAuth scopes."""
         mock_app = Mock()
-        mock_getenv.side_effect = lambda key: {
+        credentials = {
             'GOOGLE_CLIENT_ID': 'id',
             'GOOGLE_CLIENT_SECRET': 'secret'
-        }.get(key)
+        }
+        mock_getenv.side_effect = credentials.get
 
         init_oauth(mock_app)
 
