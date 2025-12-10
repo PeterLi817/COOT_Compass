@@ -1,8 +1,4 @@
-"""Functional and unit tests for website.views module.
-
-This module contains comprehensive tests for all routes and functions
-in views.py, including access control, CRUD operations, CSV import/export,
-PDF generation, and validation functions.
+""" This file contains functional tests for the website.views file.
 """
 import io
 
@@ -10,7 +6,6 @@ from flask import url_for
 
 from website import db
 from website.models import Student, Trip
-from website.views import validate_trip
 
 # Settings - admin_required & login_required
 def test_settings_page_success_admin_manager(logged_in_admin_manager):
@@ -39,7 +34,7 @@ def test_settings_page_unauthorized_student(logged_in_student):
     """
     GIVEN a test client logged in as a 'student' user (unauthorized)
     WHEN the '/settings' page is requested (GET)
-    THEN check the response redirects to the /no_access page (403).
+    THEN check the response status is 403.
     """
     response = logged_in_student.get(url_for('main.settings'))
     assert response.status_code == 403
@@ -49,7 +44,7 @@ def test_settings_page_unauthorized_no_role(logged_in_no_role):
     """
     GIVEN a test client logged in as a user with no role (unauthorized)
     WHEN the '/settings' page is requested (GET)
-    THEN check the response redirects to the /no_access page (403).
+    THEN check the response status is 403.
     """
     response = logged_in_no_role.get(url_for('main.settings'))
     assert response.status_code == 403
@@ -59,7 +54,7 @@ def test_settings_page_unauthenticated(test_client):
     """
     GIVEN a test client that is not logged in
     WHEN the '/settings' page is requested (GET)
-    THEN check the response redirects to the /login page.
+    THEN check the response status is 401.
     """
     response = test_client.get(url_for('main.settings'))
     assert response.status_code == 401
@@ -80,7 +75,7 @@ def test_student_view_with_trips_enabled(logged_in_student, app_settings):
     """
     GIVEN a test client logged in as a student and trips are visible
     WHEN the '/student_view' page is requested (GET)
-    THEN check the response includes trip information
+    THEN check the response status is 200
     """
     app_settings.show_trips_to_students = True
     db.session.commit()
@@ -92,7 +87,7 @@ def test_student_view_unauthorized_no_role(logged_in_no_role):
     """
     GIVEN a test client logged in as a user with no role (unauthorized)
     WHEN the '/student_view' page is requested (GET)
-    THEN check the response redirects to the /no_access page (403).
+    THEN check the response status is 403.
     """
     response = logged_in_no_role.get(url_for('main.student_view'))
     assert response.status_code == 403
@@ -102,7 +97,7 @@ def test_student_view_unauthenticated(test_client):
     """
     GIVEN a test client that is not logged in
     WHEN the '/student_view' page is requested (GET)
-    THEN check the response redirects to the /login page.
+    THEN check the response status is 401.
     """
     response = test_client.get(url_for('main.student_view'))
     assert response.status_code == 401
@@ -152,7 +147,7 @@ def test_trips_page_unauthorized_student(logged_in_student):
     """
     GIVEN a test client logged in as a 'student' user (unauthorized)
     WHEN the '/trips' page is requested (GET)
-    THEN check the response redirects to the /no_access page (403).
+    THEN check the response status is 403.
     """
     response = logged_in_student.get(url_for('main.trips'))
     assert response.status_code == 403
@@ -162,7 +157,7 @@ def test_trips_page_unauthenticated(test_client):
     """
     GIVEN a test client that is not logged in
     WHEN the '/trips' page is requested (GET)
-    THEN check the response redirects to the /login page.
+    THEN check the response status is 401.
     """
     response = test_client.get(url_for('main.trips'))
     assert response.status_code == 401
@@ -202,7 +197,7 @@ def test_first_years_page_unauthenticated(test_client):
     """
     GIVEN a test client that is not logged in
     WHEN the '/first-years' page is requested (GET)
-    THEN check the response redirects to the /login page.
+    THEN check the response status is 401.
     """
     response = test_client.get(url_for('main.first_years'))
     assert response.status_code == 401
@@ -232,7 +227,7 @@ def test_groups_page_unauthorized_student(logged_in_student):
     """
     GIVEN a test client logged in as a 'student' user (unauthorized)
     WHEN the '/groups' page is requested (GET)
-    THEN check the response redirects to the /no_access page (403).
+    THEN check the response status is 403.
     """
     response = logged_in_student.get(url_for('main.groups'))
     assert response.status_code == 403
@@ -242,7 +237,7 @@ def test_groups_page_unauthenticated(test_client):
     """
     GIVEN a test client that is not logged in
     WHEN the '/groups' page is requested (GET)
-    THEN check the response redirects to the /login page.
+    THEN check the response status is 401.
     """
     response = test_client.get(url_for('main.groups'))
     assert response.status_code == 401
@@ -252,7 +247,7 @@ def test_groups_page_with_trips_and_students(logged_in_admin, sample_trip, sampl
     """
     GIVEN a test client logged in as an admin with trips and students
     WHEN the '/groups' page is requested (GET)
-    THEN check the page displays trip validation information
+    THEN check the response status is 200
     """
     response = logged_in_admin.get(url_for('main.groups'))
     assert response.status_code == 200
@@ -929,286 +924,6 @@ def test_clear_databases_unauthorized_admin(logged_in_admin):
     assert response.status_code == 403
     assert b'Forbidden' in response.data
 
-
-# Unit tests for validate_trip function
-def test_validate_trip_empty_students(logged_in_admin, sample_trip):
-    """
-    GIVEN a trip with no students
-    WHEN validate_trip is called
-    THEN check all validations pass
-    """
-    validations = validate_trip(sample_trip)
-    assert validations['overall_valid'] is True
-    assert validations['gender_ratio']['valid'] is True
-
-def test_validate_trip_gender_balance_valid(logged_in_admin, sample_trip):
-    """
-    GIVEN a trip with balanced gender distribution
-    WHEN validate_trip is called
-    THEN check gender validation passes
-    """
-    # Add balanced genders
-    student1 = Student(
-        student_id='S500', email='s500@colby.edu',
-        first_name='Male', last_name='One', gender='Male'
-    )
-    student2 = Student(
-        student_id='S501', email='s501@colby.edu',
-        first_name='Female', last_name='One', gender='Female'
-    )
-    sample_trip.students.append(student1)
-    sample_trip.students.append(student2)
-    db.session.commit()
-
-    validations = validate_trip(sample_trip)
-    assert validations['gender_ratio']['valid'] is True
-    assert validations['overall_valid'] is True
-
-def test_validate_trip_gender_imbalance(logged_in_admin, sample_trip):
-    """
-    GIVEN a trip with imbalanced gender distribution
-    WHEN validate_trip is called
-    THEN check gender validation fails
-    """
-    # Add imbalanced genders (3 male, 1 female)
-    student1 = Student(
-        student_id='S502', email='s502@colby.edu',
-        first_name='Male', last_name='One', gender='Male'
-    )
-    student2 = Student(
-        student_id='S503', email='s503@colby.edu',
-        first_name='Male', last_name='Two', gender='Male'
-    )
-    student3 = Student(
-        student_id='S504', email='s504@colby.edu',
-        first_name='Male', last_name='Three', gender='Male'
-    )
-    student4 = Student(
-        student_id='S505', email='s505@colby.edu',
-        first_name='Female', last_name='One', gender='Female'
-    )
-    sample_trip.students.extend([student1, student2, student3, student4])
-    db.session.commit()
-
-    validations = validate_trip(sample_trip)
-    assert validations['gender_ratio']['valid'] is False
-    assert validations['overall_valid'] is False
-
-def test_validate_trip_duplicate_athletic_teams(logged_in_admin, sample_trip):
-    """
-    GIVEN a trip with students from the same athletic team
-    WHEN validate_trip is called
-    THEN check athletic team validation fails
-    """
-    # Add students with same team
-    student1 = Student(
-        student_id='S506', email='s506@colby.edu',
-        first_name='Player', last_name='One', athletic_team='Soccer'
-    )
-    student2 = Student(
-        student_id='S507', email='s507@colby.edu',
-        first_name='Player', last_name='Two', athletic_team='Soccer'
-    )
-    sample_trip.students.extend([student1, student2])
-    db.session.commit()
-
-    validations = validate_trip(sample_trip)
-    assert validations['athletic_teams']['valid'] is False
-    assert validations['overall_valid'] is False
-
-def test_validate_trip_duplicate_dorms(logged_in_admin, sample_trip):
-    """
-    GIVEN a trip with students from the same dorm
-    WHEN validate_trip is called
-    THEN check dorm validation fails
-    """
-    # Add students with same dorm
-    student1 = Student(
-        student_id='S508', email='s508@colby.edu',
-        first_name='Roommate', last_name='One', dorm='Dana'
-    )
-    student2 = Student(
-        student_id='S509', email='s509@colby.edu',
-        first_name='Roommate', last_name='Two', dorm='Dana'
-    )
-    sample_trip.students.extend([student1, student2])
-    db.session.commit()
-
-    validations = validate_trip(sample_trip)
-    assert validations['roommates']['valid'] is False
-    assert validations['overall_valid'] is False
-
-def test_validate_trip_low_water_comfort(logged_in_admin):
-    """
-    GIVEN a water trip with students having low water comfort
-    WHEN validate_trip is called
-    THEN check comfort level validation fails
-    """
-    # Create water trip
-    water_trip = Trip(
-        trip_name='Water Trip', trip_type='canoeing',
-        capacity=10, water=True, tent=False
-    )
-    db.session.add(water_trip)
-
-    # Add student with low water comfort
-    student = Student(
-        student_id='S510', email='s510@colby.edu',
-        first_name='Low', last_name='Comfort', water_comfort=1
-    )
-    water_trip.students.append(student)
-    db.session.commit()
-
-    validations = validate_trip(water_trip)
-    assert validations['comfort_levels']['valid'] is False
-    assert validations['overall_valid'] is False
-
-def test_validate_trip_low_tent_comfort(logged_in_admin):
-    """
-    GIVEN a tent trip with students having low tent comfort
-    WHEN validate_trip is called
-    THEN check comfort level validation fails
-    """
-    # Create tent trip
-    tent_trip = Trip(
-        trip_name='Tent Trip', trip_type='backpacking',
-        capacity=10, water=False, tent=True
-    )
-    db.session.add(tent_trip)
-
-    # Add student with low tent comfort
-    student = Student(
-        student_id='S511', email='s511@colby.edu',
-        first_name='Low', last_name='Comfort', tent_comfort=2
-    )
-    tent_trip.students.append(student)
-    db.session.commit()
-
-    validations = validate_trip(tent_trip)
-    assert validations['comfort_levels']['valid'] is False
-    assert validations['overall_valid'] is False
-
-def test_validate_trip_all_validations_pass(logged_in_admin):
-    """
-    GIVEN a trip with all validations passing
-    WHEN validate_trip is called
-    THEN check all validations pass
-    """
-    # Create trip
-    trip = Trip(
-        trip_name='Valid Trip', trip_type='basecamp',
-        capacity=10, water=False, tent=False
-    )
-    db.session.add(trip)
-
-    # Add students with balanced attributes
-    student1 = Student(
-        student_id='S512', email='s512@colby.edu',
-        first_name='Valid', last_name='One', gender='Male',
-        dorm='Dana', athletic_team='Soccer'
-    )
-    student2 = Student(
-        student_id='S513', email='s513@colby.edu',
-        first_name='Valid', last_name='Two', gender='Female',
-        dorm='West', athletic_team='Basketball'
-    )
-    trip.students.extend([student1, student2])
-    db.session.commit()
-
-    validations = validate_trip(trip)
-    assert validations['overall_valid'] is True
-    assert validations['gender_ratio']['valid'] is True
-    assert validations['athletic_teams']['valid'] is True
-    assert validations['roommates']['valid'] is True
-    assert validations['comfort_levels']['valid'] is True
-
-def test_validate_trip_athletic_team_none_values(logged_in_admin, sample_trip):
-    """
-    GIVEN a trip with students having None or 'N/A' athletic teams
-    WHEN validate_trip is called
-    THEN check athletic team validation passes (None/N/A teams are ignored)
-    """
-    student1 = Student(
-        student_id='S514', email='s514@colby.edu',
-        first_name='No', last_name='Team', athletic_team=None
-    )
-    student2 = Student(
-        student_id='S515', email='s515@colby.edu',
-        first_name='N/A', last_name='Team', athletic_team='N/A'
-    )
-    sample_trip.students.extend([student1, student2])
-    db.session.commit()
-
-    validations = validate_trip(sample_trip)
-    assert validations['athletic_teams']['valid'] is True
-
-def test_validate_trip_gender_none_values(logged_in_admin, sample_trip):
-    """
-    GIVEN a trip with students having None gender values
-    WHEN validate_trip is called
-    THEN check gender validation handles None values correctly
-    """
-    student1 = Student(
-        student_id='S516', email='s516@colby.edu',
-        first_name='No', last_name='Gender', gender=None
-    )
-    student2 = Student(
-        student_id='S517', email='s517@colby.edu',
-        first_name='Male', last_name='One', gender='Male'
-    )
-    sample_trip.students.extend([student1, student2])
-    db.session.commit()
-
-    validations = validate_trip(sample_trip)
-    # Gender validation should still work with None values
-    assert 'gender_ratio' in validations
-
-def test_validate_trip_water_comfort_none(logged_in_admin):
-    """
-    GIVEN a water trip with students having None water_comfort
-    WHEN validate_trip is called
-    THEN check comfort validation handles None values correctly
-    """
-    water_trip = Trip(
-        trip_name='Water Trip 2', trip_type='canoeing',
-        capacity=10, water=True, tent=False
-    )
-    db.session.add(water_trip)
-
-    student = Student(
-        student_id='S518', email='s518@colby.edu',
-        first_name='No', last_name='Comfort', water_comfort=None
-    )
-    water_trip.students.append(student)
-    db.session.commit()
-
-    validations = validate_trip(water_trip)
-    # None comfort should not trigger low comfort warning
-    assert validations['comfort_levels']['valid'] is True
-
-def test_validate_trip_high_water_comfort(logged_in_admin):
-    """
-    GIVEN a water trip with students having high water comfort
-    WHEN validate_trip is called
-    THEN check comfort validation passes
-    """
-    water_trip = Trip(
-        trip_name='Water Trip 3', trip_type='canoeing',
-        capacity=10, water=True, tent=False
-    )
-    db.session.add(water_trip)
-
-    student = Student(
-        student_id='S519', email='s519@colby.edu',
-        first_name='High', last_name='Comfort', water_comfort=5
-    )
-    water_trip.students.append(student)
-    db.session.commit()
-
-    validations = validate_trip(water_trip)
-    assert validations['comfort_levels']['valid'] is True
-
-
 # Additional tests for coverage gaps
 
 def test_add_student_exception_handling(logged_in_admin, sample_student, monkeypatch):
@@ -1694,7 +1409,7 @@ def test_export_pdf_student_name_truncation(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having long name
-    THEN check name is truncated in PDF
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Truncation Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -1717,7 +1432,7 @@ def test_export_pdf_dorm_truncation(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having long dorm name
-    THEN check dorm is truncated in PDF
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Dorm Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -1741,7 +1456,7 @@ def test_export_pdf_team_normalization(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having N/A team
-    THEN check team is normalized to "-" in PDF
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Team Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -1765,7 +1480,7 @@ def test_export_pdf_team_truncation(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having long team name
-    THEN check team is truncated in PDF
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Team Trunc Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -1985,7 +1700,7 @@ def test_export_pdf_long_name_truncation(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having name > 20 chars
-    THEN check name is truncated (covers line 1046)
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Name Trunc Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -2008,7 +1723,7 @@ def test_export_pdf_long_dorm_truncation(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having dorm > 12 chars
-    THEN check dorm is truncated (covers line 1054)
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Dorm Trunc Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -2032,7 +1747,7 @@ def test_export_pdf_team_none_normalization(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having team = 'none'
-    THEN check team is normalized to "-" (covers line 1059)
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Team None Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -2056,7 +1771,7 @@ def test_export_pdf_team_empty_normalization(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having empty team
-    THEN check team is normalized to "-" (covers line 1059)
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Team Empty Test', trip_type='backpacking', capacity=10)
     db.session.add(trip)
@@ -2080,7 +1795,7 @@ def test_export_pdf_long_team_truncation(logged_in_admin):
     """
     GIVEN a test client logged in as an admin
     WHEN a GET request is made to '/export_pdf' with student having team > 20 chars
-    THEN check team is truncated (covers line 1061)
+    THEN check that a PDF is generated successfully.
     """
     trip = Trip(trip_name='Team Trunc Test 2', trip_type='backpacking', capacity=10)
     db.session.add(trip)
