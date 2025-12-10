@@ -6,7 +6,6 @@ of the application.
 """
 
 from flask_login import UserMixin
-from werkzeug.security import generate_password_hash, check_password_hash
 from website import db
 
 class User(db.Model, UserMixin):
@@ -45,25 +44,6 @@ class User(db.Model, UserMixin):
             str: The user's email address.
         """
         return self.email
-
-    def set_password(self, password):
-        """Hash and store a password for the user.
-
-        Args:
-            password (str): The plain text password to hash and store.
-        """
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        """Verify a password against the stored hash.
-
-        Args:
-            password (str): The plain text password to verify.
-
-        Returns:
-            bool: True if the password matches, False otherwise.
-        """
-        return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
         return f"<User email='{self.email}' role='{self.role}'>"
