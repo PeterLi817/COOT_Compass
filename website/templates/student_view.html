@@ -55,6 +55,9 @@
                                     {% else %}
                                         <li class="list-group-item"><strong>Tent Camping:</strong> No</li>
                                     {% endif %}
+                                    {% if current_user.student.trip.description %}
+                                        <li class="list-group-item"><strong>Description:</strong> {{ current_user.student.trip.description }}</li>
+                                    {% endif %}
                                 </ul>
                                 <p class="lead">If you have any questions or need further assistance, please don't hesitate to reach out at coot@colby.edu.</p>
                                 <p class="lead">Warm Regards,</p>

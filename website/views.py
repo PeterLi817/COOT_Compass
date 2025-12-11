@@ -88,7 +88,8 @@ def trips():
             'capacity': trip.capacity,
             'address': trip.address or '',
             'water': trip.water if trip.water is not None else False,
-            'tent': trip.tent if trip.tent is not None else False
+            'tent': trip.tent if trip.tent is not None else False,
+            'description': trip.description or ''
         }
 
     return render_template('trips.html', trips=trips, trips_data_json=json.dumps(trips_data))
@@ -529,7 +530,8 @@ def add_trip():
             capacity=capacity,
             address=request.form.get('address'),
             water=water,
-            tent=tent
+            tent=tent,
+            description=request.form.get('description')
         )
 
         try:
@@ -599,6 +601,7 @@ def edit_trip():
     trip.address = request.form.get('address')
     trip.water = request.form.get('water') == 'true'
     trip.tent = request.form.get('tent') == 'true'
+    trip.description = request.form.get('description')
 
     try:
         db.session.commit()

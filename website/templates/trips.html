@@ -88,6 +88,7 @@
                                             <th>Capacity</th>
                                             <th>Water?</th>
                                             <th>Tents?</th>
+                                            <th>Description</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -101,6 +102,7 @@
                                             <td>{{ trip.capacity }}</td>
                                             <td>{{ 'Yes' if trip.water else 'No' }}</td>
                                             <td>{{ 'Yes' if trip.tent else 'No' }}</td>
+                                            <td>{{ trip.description or '' }}</td>
                                             <td>
                                                 <button class="btn btn-sm btn-primary edit-trip-btn" data-trip-id="{{ trip.id }}" data-bs-toggle="modal" data-bs-target="#addTripModal">
                                                     <i class="fas fa-edit"></i> Edit
@@ -171,6 +173,10 @@
                                         </label>
                                     </div>
                                 </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                             </div>
                             <small class="text-muted">Fields marked with * are required.</small>
                         </div>

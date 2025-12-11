@@ -150,6 +150,7 @@ class Trip(db.Model):
     address = db.Column(db.String(200))
     water = db.Column(db.Boolean, default=False)
     tent = db.Column(db.Boolean, default=False)
+    description = db.Column(db.Text)
 
     # One-to-many: Trip → Students
     # Note: cascade='all, delete-orphan' will delete students only if they become orphaned
