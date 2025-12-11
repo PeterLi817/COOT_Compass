@@ -891,7 +891,7 @@ def export_trip_csv():
     writer = csv.writer(output)
 
     writer.writerow([
-        'Trip Name', 'Trip Type', 'Capacity', 'Address', 'Water', 'Tent'
+        'Trip Name', 'Trip Type', 'Capacity', 'Address', 'Water', 'Tent', 'Description'
     ])
 
     trips = Trip.query.all()
@@ -903,7 +903,8 @@ def export_trip_csv():
             trip.capacity,
             trip.address or '',
             trip.water if trip.water is not None else '',
-            trip.tent if trip.tent is not None else ''
+            trip.tent if trip.tent is not None else '',
+            trip.description or ''
         ])
 
     output.seek(0)
@@ -988,6 +989,35 @@ def export_pdf():
             if features:
                 p.drawString(50, y, f"• Features: {', '.join(features)}")
                 y -= 15
+
+            if trip.description:
+                # Clean description - remove newlines and special characters
+                clean_description = (
+                    trip.description.replace('\n', ' ')
+                    .replace('\r', ' ')
+                    .replace('\t', ' ')
+                )
+                # Remove multiple spaces
+                clean_description = ' '.join(clean_description.split())
+
+                # Word wrap the description to fit within page width
+                max_width = width - 100
+                words = clean_description.split()
+                current_line = "• Description: "
+
+                for word in words:
+                    test_line = current_line + word + " "
+                    if p.stringWidth(test_line, "Helvetica", 10) < max_width:
+                        current_line = test_line
+                    else:
+                        p.drawString(50, y, current_line.strip())
+                        y -= 12
+                        current_line = "  " + word + " "
+
+                # Draw remaining text
+                if current_line.strip():
+                    p.drawString(50, y, current_line.strip())
+                    y -= 15
 
             y -= 10
 

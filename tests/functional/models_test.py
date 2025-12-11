@@ -212,7 +212,8 @@ class TestTripModelDatabase:
                 capacity=10,
                 address="123 River Rd, Maine",
                 water=True,
-                tent=False
+                tent=False,
+                description="Exciting river journey"
             )
             db.session.add(trip)
             db.session.commit()
@@ -224,6 +225,7 @@ class TestTripModelDatabase:
             assert retrieved.capacity == 10
             assert retrieved.water is True
             assert retrieved.tent is False
+            assert retrieved.description == "Exciting river journey"
 
     def test_trip_default_values(self, app):
         """Test that Trip boolean fields default to False."""

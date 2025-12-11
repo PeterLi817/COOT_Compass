@@ -164,7 +164,8 @@ def sample_trip(app):
         capacity=10,
         address="123 Main St",
         water=False,
-        tent=True
+        tent=True,
+        description="A challenging backpacking adventure"
     )
     db.session.add(trip)
     db.session.commit()

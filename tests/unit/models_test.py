@@ -88,7 +88,8 @@ class TestTripModel:
             trip_name="Mountain Adventure",
             capacity=12,
             water=False,
-            tent=True
+            tent=True,
+            description="A great mountain adventure"
         )
         repr_str = repr(trip)
         assert "id=10" in repr_str
@@ -205,6 +206,7 @@ class TestModelAttributes:
         assert hasattr(trip, 'address')
         assert hasattr(trip, 'water')
         assert hasattr(trip, 'tent')
+        assert hasattr(trip, 'description')
         assert hasattr(trip, 'students')
 
     def test_appsettings_has_required_attributes(self):
