@@ -6,9 +6,11 @@ central configuration point for the application.
 """
 
 import os
-from flask import Flask
+from datetime import datetime
+from flask import Flask, render_template
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import current_user
 
 load_dotenv()
 
@@ -75,6 +77,41 @@ def create_app():
     app.register_blueprint(main)
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(api)
+
+    # Error handlers
+    @app.errorhandler(401)
+    def unauthorized(error):
+        """Handle 401 Unauthorized errors.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            Response: Rendered unauthorized template with 401 status.
+        """
+        return render_template(
+            'unauthorized.html',
+            current_user=current_user,
+            now=datetime.now(),
+            error_message="401 Unauthorized - You need to be logged in to access this page."
+        ), 401
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        """Handle 403 Forbidden errors.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            Response: Rendered unauthorized template with 403 status.
+        """
+        return render_template(
+            'unauthorized.html',
+            current_user=current_user,
+            now=datetime.now(),
+            error_message="403 Forbidden - You don't have the required permissions to access this page."
+        ), 403
 
     with app.app_context():
         db.create_all()

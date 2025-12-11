@@ -67,6 +67,34 @@ class TestLoginRoute:
         call_args = mock_google.authorize_redirect.call_args[0]
         assert 'authorize' in call_args[0]
 
+    def test_login_redirects_authenticated_student(self, logged_in_student):
+        """Test that /login redirects already authenticated student to home."""
+        response = logged_in_student.get('/login', follow_redirects=False)
+
+        assert response.status_code == 302
+        assert '/' in response.location
+
+    def test_login_redirects_authenticated_admin(self, logged_in_admin):
+        """Test that /login redirects already authenticated admin to home."""
+        response = logged_in_admin.get('/login', follow_redirects=False)
+
+        assert response.status_code == 302
+        assert '/' in response.location
+
+    def test_login_redirects_authenticated_admin_manager(self, logged_in_admin_manager):
+        """Test that /login redirects already authenticated admin_manager to home."""
+        response = logged_in_admin_manager.get('/login', follow_redirects=False)
+
+        assert response.status_code == 302
+        assert '/' in response.location
+
+    def test_login_redirects_authenticated_no_role(self, logged_in_no_role):
+        """Test that /login redirects authenticated user with no role to home."""
+        response = logged_in_no_role.get('/login', follow_redirects=False)
+
+        assert response.status_code == 302
+        assert '/' in response.location
+
 class TestLogoutRoute:
     """Functional tests for the logout route."""
 
