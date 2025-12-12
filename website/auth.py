@@ -74,11 +74,14 @@ def login():
     """Initiate Google OAuth login flow.
 
     Redirects the user to Google's authorization page to begin the
-    OAuth authentication process.
+    OAuth authentication process. If user is already authenticated,
+    redirects to the home page.
 
     Returns:
-        Response: Redirect to Google OAuth authorization page.
+        Response: Redirect to Google OAuth authorization page or home page.
     """
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.login_page'))
     redirect_uri = url_for(AUTH_REDIRECT_URI, _external=True)
     return google.authorize_redirect(redirect_uri)
 

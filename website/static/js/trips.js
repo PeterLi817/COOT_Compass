@@ -80,6 +80,7 @@ window.addEventListener('DOMContentLoaded', function() {
         $('#address').val(tripData.address || '');
         $('#water').prop('checked', tripData.water === true || tripData.water === 'true');
         $('#tent').prop('checked', tripData.tent === true || tripData.tent === 'true');
+        $('#description').val(tripData.description || '');
     });
 
     // CSV Column Matching Script for Trips
@@ -90,7 +91,8 @@ window.addEventListener('DOMContentLoaded', function() {
         { value: 'capacity', label: 'Capacity' },
         { value: 'address', label: 'Address' },
         { value: 'water', label: 'Water' },
-        { value: 'tent', label: 'Tent' }
+        { value: 'tent', label: 'Tent' },
+        { value: 'description', label: 'Description' }
     ];
 
     document.getElementById('csv_file').addEventListener('change', function(e) {
@@ -159,6 +161,7 @@ window.addEventListener('DOMContentLoaded', function() {
             else if (csvLower.includes('address')) autoMatch = 'address';
             else if (csvLower.includes('water')) autoMatch = 'water';
             else if (csvLower.includes('tent')) autoMatch = 'tent';
+            else if (csvLower.includes('description')) autoMatch = 'description';
 
             tripDbFields.forEach(field => {
                 const option = document.createElement('option');

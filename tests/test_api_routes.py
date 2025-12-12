@@ -143,6 +143,7 @@ def test_get_trips_success(authenticated_admin_client):
         assert 'trip_name' in trip
         assert 'trip_type' in trip
         assert 'capacity' in trip
+        assert 'description' in trip
         assert 'current_count' in trip
         assert 'available_spots' in trip
 
@@ -1078,6 +1079,38 @@ def test_process_matched_trips_csv_boolean_fields(authenticated_admin_client):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert data['success'] is True
+
+def test_process_matched_trips_csv_with_description(authenticated_admin_client):
+    """Test CSV processing with description field"""
+    unique_id = int(time.time() * 1000) % 100000
+
+    csv_data = io.StringIO()
+    csv_writer = csv.writer(csv_data)
+    csv_writer.writerow(['Trip Name', 'Trip Type', 'Capacity', 'Description'])
+    csv_writer.writerow([f'CSV Trip {unique_id}', 'canoeing', '10', 'A great water adventure'])
+
+    response = authenticated_admin_client.post('/api/process_matched_trips_csv',
+        data={
+            'csv_file': (io.BytesIO(csv_data.getvalue().encode('utf-8')), 'test.csv'),
+            'importMode': 'add',
+            'Trip Name': 'trip_name',
+            'Trip Type': 'trip_type',
+            'Capacity': 'capacity',
+            'Description': 'description'
+        },
+        content_type='multipart/form-data'
+    )
+
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data['success'] is True
+    assert data['added'] >= 1
+
+    # Verify the description was saved
+    with authenticated_admin_client.application.app_context():
+        trip = Trip.query.filter_by(trip_name=f'CSV Trip {unique_id}').first()
+        assert trip is not None
+        assert trip.description == 'A great water adventure'
 
 def test_process_matched_trips_csv_error_handling(authenticated_admin_client):
     """Test error handling in process_matched_trips_csv"""

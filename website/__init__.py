@@ -6,9 +6,11 @@ central configuration point for the application.
 """
 
 import os
-from flask import Flask
+from datetime import datetime
+from flask import Flask, render_template
 from dotenv import load_dotenv
 from flask_sqlalchemy import SQLAlchemy
+from flask_login import current_user
 
 load_dotenv()
 
@@ -36,11 +38,11 @@ def create_app():
     app = Flask(__name__)
 
     from .views import main # pylint: disable=import-outside-toplevel
-    from .models import User, db # pylint: disable=import-outside-toplevel
     from .fill_db import add_fake_data #for development purposes
     from .auth import auth_blueprint, init_oauth # pylint: disable=import-outside-toplevel
     from .api_routes import api # pylint: disable=import-outside-toplevel
     from flask_login import LoginManager # pylint: disable=import-outside-toplevel
+    from .models import User, Student, Trip, AppSettings # pylint: disable=import-outside-toplevel
 
     if not SECRET_KEY:
         raise ValueError("SECRET_KEY environment variable must be set")
@@ -75,6 +77,58 @@ def create_app():
     app.register_blueprint(main)
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(api)
+
+    # Error handlers
+    @app.errorhandler(401)
+    def unauthorized(error):
+        """Handle 401 Unauthorized errors.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            Response: Rendered unauthorized template with 401 status.
+        """
+        return render_template(
+            'unauthorized.html',
+            current_user=current_user,
+            now=datetime.now(),
+            error_message="401 Unauthorized - You need to be logged in to access this page."
+        ), 401
+
+    @app.errorhandler(403)
+    def forbidden(error):
+        """Handle 403 Forbidden errors.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            Response: Rendered unauthorized template with 403 status.
+        """
+        return render_template(
+            'unauthorized.html',
+            current_user=current_user,
+            now=datetime.now(),
+            error_message="403 Forbidden - You don't have the required permissions to access this page."
+        ), 403
+
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            Response: Rendered unauthorized template with 404 status.
+        """
+        return render_template(
+            'unauthorized.html',
+            current_user=current_user,
+            now=datetime.now(),
+            error_message="404 - Page not found."
+        ), 404
 
     with app.app_context():
         db.create_all()
