@@ -59,10 +59,14 @@ def no_access():
     """Display the no access page for users without assigned roles.
 
     Shown to authenticated users who do not have a role assigned in the system.
+    If user has a role, redirects them to the home page.
 
     Returns:
-        Response: Rendered no access template with current user information.
+        Response: Rendered no access template with current user information,
+            or redirect to home page if user has a role.
     """
+    if current_user.role is not None:
+        return redirect(url_for('auth.login_page'))
     return render_template('no_view.html', current_user=current_user, now=datetime.now())
 
 @main.route('/trips')

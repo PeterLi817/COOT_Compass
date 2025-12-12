@@ -105,14 +105,23 @@ def test_student_view_unauthenticated(test_client):
 
 
 # No Access - login_required
-def test_no_access_success(logged_in_student):
+def test_no_access_success(logged_in_no_role):
     """
-    GIVEN a test client logged in as any user
+    GIVEN a test client logged in as a user with no role
     WHEN the '/no_access' page is requested (GET)
     THEN check the response status is 200 (OK)
     """
-    response = logged_in_student.get(url_for('main.no_access'))
+    response = logged_in_no_role.get(url_for('main.no_access'))
     assert response.status_code == 200
+
+def test_no_access_redirect_with_role(logged_in_student):
+    """
+    GIVEN a test client logged in as a user with a role (student)
+    WHEN the '/no_access' page is requested (GET)
+    THEN check the response redirects (302) to home page
+    """
+    response = logged_in_student.get(url_for('main.no_access'))
+    assert response.status_code == 302
 
 def test_no_access_unauthenticated(test_client):
     """
@@ -1838,3 +1847,150 @@ def test_export_pdf_long_team_truncation(logged_in_admin):
     response = logged_in_admin.get(url_for('main.export_pdf'))
     assert response.status_code == 200
     assert response.mimetype == 'application/pdf'
+
+
+# Unauthorized Error Page Tests
+def test_unauthorized_401_page_content(test_client):
+    """
+    GIVEN a test client that is not logged in
+    WHEN an admin-required page is requested
+    THEN check the 401 unauthorized page displays correct content
+    """
+    response = test_client.get(url_for('main.settings'))
+    assert response.status_code == 401
+    assert b'Uh Oh!' in response.data
+    assert b'Something went wrong' in response.data
+    assert b'401 Unauthorized' in response.data
+    assert b'logged in' in response.data
+    assert b'Return to Home' in response.data
+    assert b'COOT' in response.data
+
+def test_unauthorized_403_page_content(logged_in_student):
+    """
+    GIVEN a test client logged in as a student
+    WHEN an admin-required page is requested
+    THEN check the 403 forbidden page displays correct content
+    """
+    response = logged_in_student.get(url_for('main.settings'))
+    assert response.status_code == 403
+    assert b'Uh Oh!' in response.data
+    assert b'Something went wrong' in response.data
+    assert b'403 Forbidden' in response.data
+    assert b'permissions' in response.data
+    assert b'Return to Home' in response.data
+    assert b'Logout' in response.data
+
+def test_unauthorized_401_has_home_link(test_client):
+    """
+    GIVEN a test client that is not logged in
+    WHEN the unauthorized page is displayed (401)
+    THEN check it has a link to return home
+    """
+    response = test_client.get(url_for('main.trips'))
+    assert response.status_code == 401
+    assert b'href="/"' in response.data or b"href='/'" in response.data
+
+def test_unauthorized_403_has_home_and_logout_links(logged_in_no_role):
+    """
+    GIVEN a test client logged in as a user with no role
+    WHEN the unauthorized page is displayed (403)
+    THEN check it has links to return home and logout
+    """
+    response = logged_in_no_role.get(url_for('main.trips'))
+    assert response.status_code == 403
+    assert b'href="/"' in response.data or b"href='/'" in response.data
+    assert b'/logout' in response.data
+
+def test_unauthorized_page_displays_user_info_when_authenticated(logged_in_student):
+    """
+    GIVEN a test client logged in as a student
+    WHEN the unauthorized page is displayed
+    THEN check it displays the user's name
+    """
+    response = logged_in_student.get(url_for('main.first_years'))
+    assert response.status_code == 403
+    assert b'Logged in as' in response.data
+
+def test_unauthorized_401_different_routes(test_client):
+    """
+    GIVEN a test client that is not logged in
+    WHEN multiple different protected routes are accessed
+    THEN check all return 401 with unauthorized page
+    """
+    routes = [
+        'main.settings',
+        'main.trips',
+        'main.first_years',
+        'main.groups'
+    ]
+    for route in routes:
+        response = test_client.get(url_for(route))
+        assert response.status_code == 401
+        assert b'Uh Oh!' in response.data
+
+def test_unauthorized_403_different_roles(logged_in_student):
+    """
+    GIVEN a test client logged in as a student (insufficient role)
+    WHEN admin-only routes are accessed
+    THEN check all return 403 with forbidden page
+    """
+    routes = [
+        'main.settings',
+        'main.trips',
+        'main.first_years',
+        'main.groups'
+    ]
+    for route in routes:
+        response = logged_in_student.get(url_for(route))
+        assert response.status_code == 403
+        assert b'Uh Oh!' in response.data
+
+def test_no_access_page_shows_for_no_role_user(logged_in_no_role):
+    """
+    GIVEN a test client logged in as a user with no role
+    WHEN the /no_access page is accessed
+    THEN check it displays the no access page content
+    """
+    response = logged_in_no_role.get(url_for('main.no_access'))
+    assert response.status_code == 200
+    assert b'do not have access' in response.data.lower()
+
+def test_no_access_page_redirects_user_with_student_role(logged_in_student):
+    """
+    GIVEN a test client logged in as a student
+    WHEN the /no_access page is accessed
+    THEN check it redirects to home since user has a role
+    """
+    response = logged_in_student.get(url_for('main.no_access'), follow_redirects=False)
+    assert response.status_code == 302
+    assert '/' in response.location
+
+def test_no_access_page_redirects_user_with_admin_role(logged_in_admin):
+    """
+    GIVEN a test client logged in as an admin
+    WHEN the /no_access page is accessed
+    THEN check it redirects to home since user has a role
+    """
+    response = logged_in_admin.get(url_for('main.no_access'), follow_redirects=False)
+    assert response.status_code == 302
+    assert '/' in response.location
+
+def test_no_access_page_redirects_user_with_admin_manager_role(logged_in_admin_manager):
+    """
+    GIVEN a test client logged in as an admin_manager
+    WHEN the /no_access page is accessed
+    THEN check it redirects to home since user has a role
+    """
+    response = logged_in_admin_manager.get(url_for('main.no_access'), follow_redirects=False)
+    assert response.status_code == 302
+    assert '/' in response.location
+
+def test_manager_required_returns_403_for_admin(logged_in_admin):
+    """
+    GIVEN a test client logged in as an admin (not admin_manager)
+    WHEN a manager-required route is accessed
+    THEN check it returns 403 forbidden
+    """
+    response = logged_in_admin.post(url_for('main.clear_databases'))
+    assert response.status_code == 403
+    assert b'Uh Oh!' in response.data
