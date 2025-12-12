@@ -86,6 +86,7 @@ def get_trips():
                 'available_spots': t.capacity - len(t.students),
                 'water': t.water,
                 'tent': t.tent,
+                'description': t.description,
                 'students': [{
                     'id': s.id,
                     'first_name': s.first_name,
@@ -460,7 +461,7 @@ def process_matched_trips_csv():
         }
 
         valid_fields = {
-            'trip_name', 'trip_type', 'capacity', 'address', 'water', 'tent'
+            'trip_name', 'trip_type', 'capacity', 'address', 'water', 'tent', 'description'
         }
 
         added, updated, skipped = 0, 0, 0

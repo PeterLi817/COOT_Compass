@@ -510,7 +510,8 @@ def test_add_trip_success(logged_in_admin):
         'capacity': '15',
         'address': '123 River Rd',
         'water': 'true',
-        'tent': 'false'
+        'tent': 'false',
+        'description': 'A wonderful river trip'
     }, follow_redirects=True)
     assert response.status_code == 200
 
@@ -520,6 +521,7 @@ def test_add_trip_success(logged_in_admin):
     assert trip.capacity == 15
     assert trip.water is True
     assert trip.tent is False
+    assert trip.description == 'A wonderful river trip'
 
 def test_add_trip_missing_required_fields(logged_in_admin):
     """
@@ -587,7 +589,8 @@ def test_edit_trip_success(logged_in_admin, sample_trip):
         'capacity': '20',
         'address': '456 New St',
         'water': 'true',
-        'tent': 'true'
+        'tent': 'true',
+        'description': 'Updated description'
     }, follow_redirects=True)
     assert response.status_code == 200
 
@@ -595,6 +598,7 @@ def test_edit_trip_success(logged_in_admin, sample_trip):
     assert sample_trip.trip_name == 'Updated Trip'
     assert sample_trip.trip_type == 'basecamp'
     assert sample_trip.capacity == 20
+    assert sample_trip.description == 'Updated description'
 
 def test_edit_trip_missing_id(logged_in_admin):
     """
@@ -839,6 +843,7 @@ def test_export_trip_csv_success(logged_in_admin, sample_trip):
     assert response.status_code == 200
     assert response.mimetype == 'text/csv'
     assert b'Trip Name' in response.data
+    assert b'Description' in response.data
     assert sample_trip.trip_name.encode() in response.data
 
 
@@ -1353,6 +1358,25 @@ def test_export_pdf_with_both_features(logged_in_admin):
         capacity=10,
         water=True,
         tent=True
+    )
+    db.session.add(trip)
+    db.session.commit()
+
+    response = logged_in_admin.get(url_for('main.export_pdf'))
+    assert response.status_code == 200
+    assert response.mimetype == 'application/pdf'
+
+def test_export_pdf_with_description(logged_in_admin):
+    """
+    GIVEN a test client logged in as an admin
+    WHEN a GET request is made to '/export_pdf' with trip having description
+    THEN check description is included in PDF
+    """
+    trip = Trip(
+        trip_name='Trip With Description',
+        trip_type='backpacking',
+        capacity=10,
+        description='This is a wonderful trip through the mountains with beautiful views.'
     )
     db.session.add(trip)
     db.session.commit()
