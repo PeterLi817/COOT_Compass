@@ -113,6 +113,23 @@ def create_app():
             error_message="403 Forbidden - You don't have the required permissions to access this page."
         ), 403
 
+    @app.errorhandler(404)
+    def not_found(error):
+        """Handle 404 errors.
+
+        Args:
+            error: The error object.
+
+        Returns:
+            Response: Rendered unauthorized template with 404 status.
+        """
+        return render_template(
+            'unauthorized.html',
+            current_user=current_user,
+            now=datetime.now(),
+            error_message="404 - Page not found."
+        ), 404
+
     with app.app_context():
         db.create_all()
 

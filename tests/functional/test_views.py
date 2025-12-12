@@ -1834,8 +1834,10 @@ def test_unauthorized_401_page_content(test_client):
     """
     response = test_client.get(url_for('main.settings'))
     assert response.status_code == 401
-    assert b'Access Denied' in response.data
-    assert b'permission' in response.data.lower()
+    assert b'Uh Oh!' in response.data
+    assert b'Something went wrong' in response.data
+    assert b'401 Unauthorized' in response.data
+    assert b'logged in' in response.data
     assert b'Return to Home' in response.data
     assert b'COOT' in response.data
 
@@ -1847,8 +1849,10 @@ def test_unauthorized_403_page_content(logged_in_student):
     """
     response = logged_in_student.get(url_for('main.settings'))
     assert response.status_code == 403
-    assert b'Access Denied' in response.data
-    assert b'permission' in response.data.lower()
+    assert b'Uh Oh!' in response.data
+    assert b'Something went wrong' in response.data
+    assert b'403 Forbidden' in response.data
+    assert b'permissions' in response.data
     assert b'Return to Home' in response.data
     assert b'Logout' in response.data
 
@@ -1898,7 +1902,7 @@ def test_unauthorized_401_different_routes(test_client):
     for route in routes:
         response = test_client.get(url_for(route))
         assert response.status_code == 401
-        assert b'Access Denied' in response.data
+        assert b'Uh Oh!' in response.data
 
 def test_unauthorized_403_different_roles(logged_in_student):
     """
@@ -1915,7 +1919,7 @@ def test_unauthorized_403_different_roles(logged_in_student):
     for route in routes:
         response = logged_in_student.get(url_for(route))
         assert response.status_code == 403
-        assert b'Access Denied' in response.data
+        assert b'Uh Oh!' in response.data
 
 def test_no_access_page_shows_for_no_role_user(logged_in_no_role):
     """
@@ -1965,4 +1969,4 @@ def test_manager_required_returns_403_for_admin(logged_in_admin):
     """
     response = logged_in_admin.post(url_for('main.clear_databases'))
     assert response.status_code == 403
-    assert b'Access Denied' in response.data
+    assert b'Uh Oh!' in response.data
