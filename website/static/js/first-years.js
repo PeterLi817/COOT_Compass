@@ -354,7 +354,6 @@ window.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(`CSV uploaded successfully!\nAdded: ${data.added}, Updated: ${data.updated}, Skipped: ${data.skipped}`);
                 if (data.errors && data.errors.length > 0) {
                     console.warn('Errors:', data.errors);
                 }
@@ -362,14 +361,12 @@ window.addEventListener('DOMContentLoaded', function() {
                 modal.hide();
                 window.location.reload();
             } else {
-                alert('Error: ' + (data.message || 'Failed to upload CSV'));
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Upload CSV';
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Error uploading CSV: ' + error.message);
             submitBtn.disabled = false;
             submitBtn.textContent = 'Upload CSV';
         });

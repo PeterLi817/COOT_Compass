@@ -193,8 +193,8 @@ def swap_students():
         db.session.commit()
 
         message = (
-            f'Swapped {student1.first_name} {student1.last_name} ({trip1_name}) '
-            f'with {student2.first_name} {student2.last_name} ({trip2_name})'
+            f'Swapped {student1.first_name} {student1.last_name} (from {trip1_name}) '
+            f'with {student2.first_name} {student2.last_name} (from {trip2_name})'
         )
 
         return jsonify({
@@ -295,6 +295,7 @@ def process_matched_csv():
         import_mode = request.form.get("importMode")
 
         if not file:
+            flash('No CSV uploaded.', 'danger')
             return jsonify({"success": False, "message": "No CSV uploaded."}), 400
 
         stream = io.StringIO(file.stream.read().decode("utf-8"))
@@ -302,6 +303,7 @@ def process_matched_csv():
         rows = list(csv_input)
 
         if not rows:
+            flash('CSV is empty.', 'danger')
             return jsonify({"success": False, "message": "CSV is empty."}), 400
 
         column_map = {
@@ -409,6 +411,20 @@ def process_matched_csv():
 
         db.session.commit()
 
+        # Create success message
+        message_parts = []
+        if added > 0:
+            message_parts.append(f"{added} student(s) added")
+        if updated > 0:
+            message_parts.append(f"{updated} student(s) updated")
+        if skipped > 0:
+            message_parts.append(f"{skipped} student(s) skipped")
+
+        flash(f"Student CSV processed successfully: {', '.join(message_parts)}.", 'success')
+
+        if errors:
+            flash(f"{len(errors)} error(s) encountered. Check the response for details.", 'warning')
+
         return jsonify({
             "success": True,
             "added": added,
@@ -419,6 +435,7 @@ def process_matched_csv():
 
     except Exception as e:
         db.session.rollback()
+        flash(f'Error processing student CSV: {str(e)}', 'danger')
         return jsonify({"success": False, "message": str(e)}), 500
 
 @api.route('/process_matched_trips_csv', methods=['POST'])
@@ -445,6 +462,7 @@ def process_matched_trips_csv():
         import_mode = request.form.get("importMode")
 
         if not file:
+            flash('No CSV uploaded.', 'danger')
             return jsonify({"success": False, "message": "No CSV uploaded."}), 400
 
         stream = io.StringIO(file.stream.read().decode("utf-8"))
@@ -452,6 +470,7 @@ def process_matched_trips_csv():
         rows = list(csv_input)
 
         if not rows:
+            flash('CSV is empty.', 'danger')
             return jsonify({"success": False, "message": "CSV is empty."}), 400
 
         column_map = {
@@ -526,6 +545,20 @@ def process_matched_trips_csv():
 
         db.session.commit()
 
+        # Create success message
+        message_parts = []
+        if added > 0:
+            message_parts.append(f"{added} trip(s) added")
+        if updated > 0:
+            message_parts.append(f"{updated} trip(s) updated")
+        if skipped > 0:
+            message_parts.append(f"{skipped} trip(s) skipped")
+
+        flash(f"Trips CSV processed successfully: {', '.join(message_parts)}.", 'success')
+
+        if errors:
+            flash(f"{len(errors)} error(s) encountered. Check the response for details.", 'warning')
+
         return jsonify({
             "success": True,
             "added": added,
@@ -536,6 +569,7 @@ def process_matched_trips_csv():
 
     except Exception as e:
         db.session.rollback()
+        flash(f'Error processing trip CSV: {str(e)}', 'danger')
         return jsonify({"success": False, "message": str(e)}), 500
 
 @api.route('/update-user-role', methods=['POST'])
