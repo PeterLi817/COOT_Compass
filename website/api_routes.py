@@ -665,6 +665,24 @@ def sort_students_api():
             stats = sort_students()
         db.session.commit()
 
+        # Create flash message based on sorting results
+        if stats.get('all_valid', False):
+            flash(
+                f'🎯 Sorting completed in {stats["attempts"]} attempt(s)! '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice, '
+                f'{stats["assignment_rate"]:.1f}% total placement rate. '
+                f'All trips are valid! ✓',
+                'success'
+            )
+        else:
+            flash(
+                f'⚠️ Sorting completed after {stats["attempts"]} attempts, but some trips may still be invalid. '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice.',
+                'warning'
+            )
+
         return jsonify({
             'success': True,
             'message': 'Sorting completed.',
@@ -673,6 +691,7 @@ def sort_students_api():
 
     except Exception as e:
         db.session.rollback()
+        flash(f'⚠️ Error sorting students: {str(e)}', 'danger')
         return jsonify({
             'success': False,
             'message': str(e)

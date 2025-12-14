@@ -1215,6 +1215,9 @@ def clear_databases():
             (User.role.is_(None))
         ).delete(synchronize_session=False)
 
+        # Hide trips from students
+        settings = AppSettings.get()
+        settings.show_trips_to_students = False
 
         db.session.commit()
         flash(

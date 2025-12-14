@@ -5,7 +5,7 @@ import io
 from flask import url_for
 
 from website import db
-from website.models import Student, Trip
+from website.models import Student, Trip, AppSettings
 
 # Settings - admin_required & login_required
 def test_settings_page_success_admin_manager(logged_in_admin_manager):
@@ -917,8 +917,13 @@ def test_clear_databases_success(logged_in_admin_manager, sample_student, sample
     """
     GIVEN a test client logged in as an admin_manager
     WHEN a POST request is made to '/clear-databases'
-    THEN check students, trips, and non-admin users are deleted
+    THEN check students, trips, and non-admin users are deleted and trips are hidden from students
     """
+    # Set show_trips_to_students to True first
+    settings = AppSettings.get()
+    settings.show_trips_to_students = True
+    db.session.commit()
+
     response = logged_in_admin_manager.post(
         url_for('main.clear_databases'), follow_redirects=True
     )
@@ -927,6 +932,10 @@ def test_clear_databases_success(logged_in_admin_manager, sample_student, sample
     # Check students and trips are deleted
     assert Student.query.count() == 0
     assert Trip.query.count() == 0
+
+    # Check trips are hidden from students
+    settings = AppSettings.get()
+    assert settings.show_trips_to_students is False
 
 def test_clear_databases_unauthorized_admin(logged_in_admin):
     """
