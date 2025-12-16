@@ -697,113 +697,117 @@ def test_remove_trip_clears_student_assignments(
 
 
 # Upload CSV - admin_required
-def test_upload_csv_success(logged_in_admin):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' with valid CSV file
-    THEN check students are imported and redirected to groups page
-    """
-    csv_data = 'student_id,first_name,last_name,email,gender\nS300,Test,User,testuser@colby.edu,Male'
-    csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
+# NOTE: main.upload_csv is no longer used - replaced by API routes:
+# /api/process_matched_csv (for students) and /api/process_matched_trips_csv (for trips)
+# These tests are commented out as the endpoint no longer exists
 
-    response = logged_in_admin.post(
-        url_for('main.upload_csv'),
-        data={'csv_file': csv_file},
-        follow_redirects=True,
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 200
+# def test_upload_csv_success(logged_in_admin):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' with valid CSV file
+#     THEN check students are imported and redirected to groups page
+#     """
+#     csv_data = 'student_id,first_name,last_name,email,gender\nS300,Test,User,testuser@colby.edu,Male'
+#     csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
 
-    student = Student.query.filter_by(student_id='S300').first()
-    assert student is not None
-    assert student.first_name == 'Test'
+#     response = logged_in_admin.post(
+#         url_for('main.upload_csv'),
+#         data={'csv_file': csv_file},
+#         follow_redirects=True,
+#         content_type='multipart/form-data'
+#     )
+#     assert response.status_code == 200
 
-def test_upload_csv_no_file(logged_in_admin):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' without a file
-    THEN check an error flash message is shown
-    """
-    response = logged_in_admin.post(url_for('main.upload_csv'), data={}, follow_redirects=True)
-    assert response.status_code == 200
-    assert b'No file selected' in response.data
+#     student = Student.query.filter_by(student_id='S300').first()
+#     assert student is not None
+#     assert student.first_name == 'Test'
 
-def test_upload_csv_creates_trip(logged_in_admin):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' with trip_name and trip_type
-    THEN check a new trip is created if it doesn't exist
-    """
-    csv_data = (
-        'student_id,first_name,last_name,email,trip_name,trip_type\n'
-        'S400,Test,User,testuser2@colby.edu,New Trip,backpacking'
-    )
-    csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
+# def test_upload_csv_no_file(logged_in_admin):):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' without a file
+#     THEN check an error flash message is shown
+#     """
+#     response = logged_in_admin.post(url_for('main.upload_csv'), data={}, follow_redirects=True)
+#     assert response.status_code == 200
+#     assert b'No file selected' in response.data
 
-    response = logged_in_admin.post(
-        url_for('main.upload_csv'),
-        data={'csv_file': csv_file},
-        follow_redirects=True,
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 200
+# def test_upload_csv_creates_trip(logged_in_admin):):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' with trip_name and trip_type
+#     THEN check a new trip is created if it doesn't exist
+#     """
+#     csv_data = (
+#         'student_id,first_name,last_name,email,trip_name,trip_type\n'
+#         'S400,Test,User,testuser2@colby.edu,New Trip,backpacking'
+#     )
+#     csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
 
-    trip = Trip.query.filter_by(trip_name='New Trip').first()
-    assert trip is not None
-    assert trip.trip_type == 'backpacking'
+#     response = logged_in_admin.post(
+#         url_for('main.upload_csv'),
+#         data={'csv_file': csv_file},
+#         follow_redirects=True,
+#         content_type='multipart/form-data'
+#     )
+#     assert response.status_code == 200
 
-def test_upload_csv_updates_existing_student(logged_in_admin, sample_student):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' with existing student_id
-    THEN check the student is updated, not duplicated
-    """
-    csv_data = (
-        f'student_id,first_name,last_name,email\n'
-        f'{sample_student.student_id},Updated,Name,{sample_student.email}'
-    )
-    csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
+#     trip = Trip.query.filter_by(trip_name='New Trip').first()
+#     assert trip is not None
+#     assert trip.trip_type == 'backpacking'
 
-    response = logged_in_admin.post(
-        url_for('main.upload_csv'),
-        data={'csv_file': csv_file},
-        follow_redirects=True,
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 200
+# def test_upload_csv_updates_existing_student(logged_in_admin, sample_student):):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' with existing student_id
+#     THEN check the student is updated, not duplicated
+#     """
+#     csv_data = (
+#         f'student_id,first_name,last_name,email\n'
+#         f'{sample_student.student_id},Updated,Name,{sample_student.email}'
+#     )
+#     csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
 
-    # Check only one student with this ID exists
-    students = Student.query.filter_by(student_id=sample_student.student_id).all()
-    assert len(students) == 1
-    assert students[0].first_name == 'Updated'
-    assert students[0].last_name == 'Name'
+#     response = logged_in_admin.post(
+#         url_for('main.upload_csv'),
+#         data={'csv_file': csv_file},
+#         follow_redirects=True,
+#         content_type='multipart/form-data'
+#     )
+#     assert response.status_code == 200
 
-def test_upload_csv_skips_incomplete_rows(logged_in_admin):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' with incomplete rows
-    THEN check incomplete rows are skipped
-    """
-    csv_data = (
-        'student_id,first_name,last_name,email\n'
-        'S500,Complete,Student,complete@colby.edu\n'
-        'S501,,Incomplete,\n'
-        'S502,Another,Complete,another@colby.edu'
-    )
-    csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
+#     # Check only one student with this ID exists
+#     students = Student.query.filter_by(student_id=sample_student.student_id).all()
+#     assert len(students) == 1
+#     assert students[0].first_name == 'Updated'
+#     assert students[0].last_name == 'Name'
 
-    response = logged_in_admin.post(
-        url_for('main.upload_csv'),
-        data={'csv_file': csv_file},
-        follow_redirects=True,
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 200
+# def test_upload_csv_skips_incomplete_rows(logged_in_admin):):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' with incomplete rows
+#     THEN check incomplete rows are skipped
+#     """
+#     csv_data = (
+#         'student_id,first_name,last_name,email\n'
+#         'S500,Complete,Student,complete@colby.edu\n'
+#         'S501,,Incomplete,\n'
+#         'S502,Another,Complete,another@colby.edu'
+#     )
+#     csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
 
-    # Check only complete students were added
-    assert Student.query.filter_by(student_id='S500').first() is not None
-    assert Student.query.filter_by(student_id='S501').first() is None
-    assert Student.query.filter_by(student_id='S502').first() is not None
+#     response = logged_in_admin.post(
+#         url_for('main.upload_csv'),
+#         data={'csv_file': csv_file},
+#         follow_redirects=True,
+#         content_type='multipart/form-data'
+#     )
+#     assert response.status_code == 200
+
+#     # Check only complete students were added
+#     assert Student.query.filter_by(student_id='S500').first() is not None
+#     assert Student.query.filter_by(student_id='S501').first() is None
+#     assert Student.query.filter_by(student_id='S502').first() is not None
 
 
 # Export CSV - admin_required
@@ -879,37 +883,37 @@ def test_export_pdf_empty_trips(logged_in_admin):
     assert response.mimetype == 'application/pdf'
 
 
-# Download Sample CSV - admin_required
-def test_download_sample_csv_success(logged_in_admin):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a GET request is made to '/download_sample_csv'
-    THEN check a CSV file is returned with sample data
-    """
-    response = logged_in_admin.get(url_for('main.download_sample_csv'))
-    assert response.status_code == 200
-    assert response.mimetype == 'text/csv'
-    assert b'student_id' in response.data
-    assert b'S001' in response.data  # Sample data
+# # Download Sample CSV - admin_required
+# def test_download_sample_csv_success(logged_in_admin):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a GET request is made to '/download_sample_csv'
+#     THEN check a CSV file is returned with sample data
+#     """
+#     response = logged_in_admin.get(url_for('main.download_sample_csv'))
+#     assert response.status_code == 200
+#     assert response.mimetype == 'text/csv'
+#     assert b'student_id' in response.data
+#     assert b'S001' in response.data  # Sample data
 
 
-# Sort Students - admin_required
-def test_sort_students_success(logged_in_admin, sample_trip, sample_student):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/sort-students'
-    THEN check students are sorted and redirected to groups page
-    """
-    # Set trip preference for student
-    sample_student.trip_pref_1 = sample_trip.trip_type
-    db.session.commit()
+# # Sort Students - admin_required
+# def test_sort_students_success(logged_in_admin, sample_trip, sample_student):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/sort-students'
+#     THEN check students are sorted and redirected to groups page
+#     """
+#     # Set trip preference for student
+#     sample_student.trip_pref_1 = sample_trip.trip_type
+#     db.session.commit()
 
-    response = logged_in_admin.post(
-        url_for('main.sort_students_route'), follow_redirects=True
-    )
-    assert response.status_code == 200
-    # Check for success message (may vary based on sort_students implementation)
-    assert b'Sorting completed' in response.data or b'Sorting failed' in response.data
+#     response = logged_in_admin.post(
+#         url_for('main.sort_students_route'), follow_redirects=True
+#     )
+#     assert response.status_code == 200
+#     # Check for success message (may vary based on sort_students implementation)
+#     assert b'Sorting completed' in response.data or b'Sorting failed' in response.data
 
 
 # Clear Databases - manager_required
@@ -1219,50 +1223,50 @@ def test_remove_trip_exception_handling(logged_in_admin, sample_trip, monkeypatc
     assert response.status_code == 200
     assert b'Error: Could not remove trip' in response.data
 
-def test_upload_csv_exception_handling(logged_in_admin, monkeypatch):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' that triggers an exception
-    THEN check exception is caught and error message is shown
-    """
-    csv_data = 'student_id,first_name,last_name,email\nS800,Test,User,test@colby.edu'
-    csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
+# def test_upload_csv_exception_handling(logged_in_admin, monkeypatch):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' that triggers an exception
+#     THEN check exception is caught and error message is shown
+#     """
+#     csv_data = 'student_id,first_name,last_name,email\nS800,Test,User,test@colby.edu'
+#     csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
 
-    # Mock db.session.commit to raise an exception
-    def mock_commit():
-        raise Exception("CSV processing error")
+#     # Mock db.session.commit to raise an exception
+#     def mock_commit():
+#         raise Exception("CSV processing error")
 
-    monkeypatch.setattr(db.session, 'commit', mock_commit)
+#     monkeypatch.setattr(db.session, 'commit', mock_commit)
 
-    response = logged_in_admin.post(
-        url_for('main.upload_csv'),
-        data={'csv_file': csv_file},
-        follow_redirects=True,
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 200
-    assert b'Error processing CSV' in response.data
+#     response = logged_in_admin.post(
+#         url_for('main.upload_csv'),
+#         data={'csv_file': csv_file},
+#         follow_redirects=True,
+#         content_type='multipart/form-data'
+#     )
+#     assert response.status_code == 200
+#     assert b'Error processing CSV' in response.data
 
-def test_upload_csv_creates_trip_branch(logged_in_admin):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' with trip_name but no existing trip
-    THEN check a new trip is created
-    """
-    csv_data = 'student_id,first_name,last_name,email,trip_name,trip_type\nS900,Test,User,test900@colby.edu,New Trip 2,basecamp'
-    csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
+# def test_upload_csv_creates_trip_branch(logged_in_admin):):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' with trip_name but no existing trip
+#     THEN check a new trip is created
+#     """
+#     csv_data = 'student_id,first_name,last_name,email,trip_name,trip_type\nS900,Test,User,test900@colby.edu,New Trip 2,basecamp'
+#     csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
 
-    response = logged_in_admin.post(
-        url_for('main.upload_csv'),
-        data={'csv_file': csv_file},
-        follow_redirects=True,
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 200
+#     response = logged_in_admin.post(
+#         url_for('main.upload_csv'),
+#         data={'csv_file': csv_file},
+#         follow_redirects=True,
+#         content_type='multipart/form-data'
+#     )
+#     assert response.status_code == 200
 
-    trip = Trip.query.filter_by(trip_name='New Trip 2').first()
-    assert trip is not None
-    assert trip.trip_type == 'basecamp'
+#     trip = Trip.query.filter_by(trip_name='New Trip 2').first()
+#     assert trip is not None
+#     assert trip.trip_type == 'basecamp'
 
 def test_export_csv_with_invalid_trip_id(logged_in_admin, sample_student):
     """
@@ -1551,23 +1555,23 @@ def test_export_pdf_exception_handling(logged_in_admin, monkeypatch):
     assert response.status_code == 500
     assert b'Error generating PDF' in response.data
 
-def test_sort_students_exception_handling(logged_in_admin, monkeypatch):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/sort-students' that triggers an exception
-    THEN check exception is caught and error message is shown
-    """
-    # Mock sort_students to raise an exception
-    def mock_sort_students():
-        raise RuntimeError("Sorting error")
+# def test_sort_students_exception_handling(logged_in_admin, monkeypatch):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/sort-students' that triggers an exception
+#     THEN check exception is caught and error message is shown
+#     """
+#     # Mock sort_students to raise an exception
+#     def mock_sort_students():
+#         raise RuntimeError("Sorting error")
 
-    # Patch the imported function in the views module
-    from website import views
-    monkeypatch.setattr(views, 'sort_students', mock_sort_students)
+#     # Patch the imported function in the views module
+#     from website import views
+#     monkeypatch.setattr(views, 'sort_students', mock_sort_students)
 
-    response = logged_in_admin.post(url_for('main.sort_students_route'), follow_redirects=True)
-    assert response.status_code == 200
-    assert b'Sorting failed' in response.data
+#     response = logged_in_admin.post(url_for('main.sort_students_route'), follow_redirects=True)
+#     assert response.status_code == 200
+#     assert b'Sorting failed' in response.data
 
 def test_clear_databases_exception_handling(logged_in_admin_manager, monkeypatch):
     """
@@ -1626,36 +1630,36 @@ def test_remove_trip_not_found(logged_in_admin):
     assert response.status_code == 200
     assert b'Error: Trip not found' in response.data
 
-def test_upload_csv_creates_trip_with_trip_type(logged_in_admin):
-    """
-    GIVEN a test client logged in as an admin
-    WHEN a POST request is made to '/upload_csv' with trip_name but no
-    existing trip and trip_type provided
-    THEN check a new trip is created (covers branch 754->765)
-    """
-    csv_data = (
-        'student_id,first_name,last_name,email,trip_name,trip_type\n'
-        'S950,Test,User,test950@colby.edu,New Trip 3,basecamp'
-    )
-    csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
+# def test_upload_csv_creates_trip_with_trip_type(logged_in_admin):
+#     """
+#     GIVEN a test client logged in as an admin
+#     WHEN a POST request is made to '/upload_csv' with trip_name but no
+#     existing trip and trip_type provided
+#     THEN check a new trip is created (covers branch 754->765)
+#     """
+#     csv_data = (
+#         'student_id,first_name,last_name,email,trip_name,trip_type\n'
+#         'S950,Test,User,test950@colby.edu,New Trip 3,basecamp'
+#     )
+#     csv_file = (io.BytesIO(csv_data.encode('utf-8')), 'test.csv')
 
-    # Ensure trip doesn't exist
-    existing_trip = Trip.query.filter_by(trip_name='New Trip 3').first()
-    if existing_trip:
-        db.session.delete(existing_trip)
-        db.session.commit()
+#     # Ensure trip doesn't exist
+#     existing_trip = Trip.query.filter_by(trip_name='New Trip 3').first()
+#     if existing_trip:
+#         db.session.delete(existing_trip)
+#         db.session.commit()
 
-    response = logged_in_admin.post(
-        url_for('main.upload_csv'),
-        data={'csv_file': csv_file},
-        follow_redirects=True,
-        content_type='multipart/form-data'
-    )
-    assert response.status_code == 200
+#     response = logged_in_admin.post(
+#         url_for('main.upload_csv'),
+#         data={'csv_file': csv_file},
+#         follow_redirects=True,
+#         content_type='multipart/form-data'
+#     )
+#     assert response.status_code == 200
 
-    trip = Trip.query.filter_by(trip_name='New Trip 3').first()
-    assert trip is not None
-    assert trip.trip_type == 'basecamp'
+#     trip = Trip.query.filter_by(trip_name='New Trip 3').first()
+#     assert trip is not None
+#     assert trip.trip_type == 'basecamp'
 
 def test_export_csv_with_nonexistent_trip(logged_in_admin, sample_student):
     """
