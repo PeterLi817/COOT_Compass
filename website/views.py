@@ -213,14 +213,21 @@ def validate_trip(trip):
 
     male_count = sum(1 for s in students if s.gender and s.gender.lower() == 'male')
     female_count = sum(1 for s in students if s.gender and s.gender.lower() == 'female')
+    other_count = sum(1 for s in students if s.gender and s.gender.lower() not in ['male', 'female', '', 'n/a', 'none'])
     gender_diff = abs(male_count - female_count)
+
+    # Build message with other count if present
+    gender_message = f"{male_count} Male, {female_count} Female"
+    if other_count > 0:
+        gender_message += f", {other_count} Other"
+
     if gender_diff > 1:
         validations['gender_ratio']['valid'] = False
-        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
+        validations['gender_ratio']['message'] = gender_message
         validations['gender_ratio']['details'] = f"Gender ratio off by {gender_diff}"
         validations['overall_valid'] = False
     else:
-        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
+        validations['gender_ratio']['message'] = gender_message
 
     athletic_teams = {}
     for student in students:
