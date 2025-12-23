@@ -213,14 +213,21 @@ def validate_trip(trip):
 
     male_count = sum(1 for s in students if s.gender and s.gender.lower() == 'male')
     female_count = sum(1 for s in students if s.gender and s.gender.lower() == 'female')
+    other_count = sum(1 for s in students if s.gender and s.gender.lower() not in ['male', 'female', '', 'n/a', 'none'])
     gender_diff = abs(male_count - female_count)
+
+    # Build message with other count if present
+    gender_message = f"{male_count} Male, {female_count} Female"
+    if other_count > 0:
+        gender_message += f", {other_count} Other"
+
     if gender_diff > 1:
         validations['gender_ratio']['valid'] = False
-        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
+        validations['gender_ratio']['message'] = gender_message
         validations['gender_ratio']['details'] = f"Gender ratio off by {gender_diff}"
         validations['overall_valid'] = False
     else:
-        validations['gender_ratio']['message'] = f"{male_count} Male, {female_count} Female"
+        validations['gender_ratio']['message'] = gender_message
 
     athletic_teams = {}
     for student in students:
@@ -659,161 +666,161 @@ def remove_trip():
         return redirect(url_for('main.trips'))
     return redirect(url_for('main.trips'))
 
-@main.route('/upload_csv', methods=['POST'])
-@admin_required
-def upload_csv():
-    """Upload and process a CSV file to import student data.
+# @main.route('/upload_csv', methods=['POST'])
+# @admin_required
+# def upload_csv():
+#     """Upload and process a CSV file to import student data.
 
-    Accepts a CSV file with flexible column naming (case-insensitive,
-    handles spaces and hyphens). Automatically creates trips if trip_name
-    and trip_type are provided. Updates existing students or adds new ones.
+#     Accepts a CSV file with flexible column naming (case-insensitive,
+#     handles spaces and hyphens). Automatically creates trips if trip_name
+#     and trip_type are provided. Updates existing students or adds new ones.
 
-    Returns:
-        Response: Redirect to groups page with success/error flash message
-            including counts of added, updated, and skipped records.
-    """
-    file = request.files.get('csv_file')
-    if not file:
-        flash('⚠️ No file selected.', 'danger')
-        return redirect(url_for('main.groups'))
+#     Returns:
+#         Response: Redirect to groups page with success/error flash message
+#             including counts of added, updated, and skipped records.
+#     """
+#     file = request.files.get('csv_file')
+#     if not file:
+#         flash('⚠️ No file selected.', 'danger')
+#         return redirect(url_for('main.groups'))
 
-    try:
-        stream = io.StringIO(file.stream.read().decode("utf-8"))
-        csv_input = csv.DictReader(stream)
+#     try:
+#         stream = io.StringIO(file.stream.read().decode("utf-8"))
+#         csv_input = csv.DictReader(stream)
 
-        # Normalize column names (case-insensitive, strip whitespace)
-        def normalize_key(key):
-            """Normalize a CSV column name for flexible matching.
+#         # Normalize column names (case-insensitive, strip whitespace)
+#         def normalize_key(key):
+#             """Normalize a CSV column name for flexible matching.
 
-            Converts the key to lowercase, strips whitespace, and replaces
-            spaces and hyphens with underscores for consistent matching.
+#             Converts the key to lowercase, strips whitespace, and replaces
+#             spaces and hyphens with underscores for consistent matching.
 
-            Args:
-                key (str): The column name to normalize.
+#             Args:
+#                 key (str): The column name to normalize.
 
-            Returns:
-                str: The normalized column name, or empty string if key is None.
-            """
-            return key.strip().lower().replace(' ', '_').replace('-', '_') if key else ''
+#             Returns:
+#                 str: The normalized column name, or empty string if key is None.
+#             """
+#             return key.strip().lower().replace(' ', '_').replace('-', '_') if key else ''
 
-        # Create a mapping of normalized column names to actual column names
-        fieldnames = csv_input.fieldnames or []
-        column_map = {normalize_key(fn): fn for fn in fieldnames}
+#         # Create a mapping of normalized column names to actual column names
+#         fieldnames = csv_input.fieldnames or []
+#         column_map = {normalize_key(fn): fn for fn in fieldnames}
 
-        def get_value(row, possible_keys):
-            """Get a value from a CSV row using flexible column name matching.
+#         def get_value(row, possible_keys):
+#             """Get a value from a CSV row using flexible column name matching.
 
-            Attempts to find a value in the row by trying multiple possible
-            column name variations. Uses normalized keys for case-insensitive
-            and format-flexible matching.
+#             Attempts to find a value in the row by trying multiple possible
+#             column name variations. Uses normalized keys for case-insensitive
+#             and format-flexible matching.
 
-            Args:
-                row (dict): The CSV row dictionary.
-                possible_keys (list): List of possible column name variations to try.
+#             Args:
+#                 row (dict): The CSV row dictionary.
+#                 possible_keys (list): List of possible column name variations to try.
 
-            Returns:
-                str: The found value (stripped of whitespace), or empty string
-                    if no matching column is found.
-            """
-            for key in possible_keys:
-                normalized = normalize_key(key)
-                if normalized in column_map:
-                    actual_key = column_map[normalized]
-                    return (row.get(actual_key) or '').strip()
-            return ''
+#             Returns:
+#                 str: The found value (stripped of whitespace), or empty string
+#                     if no matching column is found.
+#             """
+#             for key in possible_keys:
+#                 normalized = normalize_key(key)
+#                 if normalized in column_map:
+#                     actual_key = column_map[normalized]
+#                     return (row.get(actual_key) or '').strip()
+#             return ''
 
-        added_count = 0
-        updated_count = 0
-        skipped_count = 0
+#         added_count = 0
+#         updated_count = 0
+#         skipped_count = 0
 
-        for row in csv_input:
-            # Try multiple possible column name variations
-            student_id = get_value(row, ['student_id', 'Student ID', 'student id', 'ID'])
-            first_name = get_value(
-                row,
-                ['first_name', 'First Name', 'first name', 'First', 'first']
-            )
-            last_name = get_value(row, ['last_name', 'Last Name', 'last name', 'Last', 'last'])
-            email = get_value(row, ['email', 'Email', 'EMAIL', 'e-mail'])
-            gender = get_value(row, ['gender', 'Gender', 'GENDER', 'sex', 'Sex'])
-            team = get_value(
-                row, ['athletic_team', 'Athletic Team', 'athletic team',
-                'team', 'Team', 'sport'],
-            )
-            hometown = get_value(row, ['hometown', 'Hometown', 'Hometown', 'city', 'City'])
-            dorm = get_value(row, ['dorm', 'Dorm', 'DORM', 'residence', 'Residence'])
-            water_comfort = get_value(
-                row,
-                ['water_comfort', 'Water Comfort', 'water comfort', 'water']
-            )
-            tent_comfort = get_value(row, ['tent_comfort', 'Tent Comfort', 'tent comfort', 'tent'])
-            allergies_dietary_restrictions = get_value(row, ['allergies_dietary_restrictions', 'Allergies & Dietary Restrictions', 'allergies', 'Allergies', 'dietary restrictions', 'Dietary Restrictions'])
-            trip_name = get_value(row, ['trip_name', 'Trip Name', 'trip name', 'Trip', 'trip'])
-            trip_type = get_value(row, ['trip_type', 'Trip Type', 'trip type', 'Type', 'type'])
+#         for row in csv_input:
+#             # Try multiple possible column name variations
+#             student_id = get_value(row, ['student_id', 'Student ID', 'student id', 'ID'])
+#             first_name = get_value(
+#                 row,
+#                 ['first_name', 'First Name', 'first name', 'First', 'first']
+#             )
+#             last_name = get_value(row, ['last_name', 'Last Name', 'last name', 'Last', 'last'])
+#             email = get_value(row, ['email', 'Email', 'EMAIL', 'e-mail'])
+#             gender = get_value(row, ['gender', 'Gender', 'GENDER', 'sex', 'Sex'])
+#             team = get_value(
+#                 row, ['athletic_team', 'Athletic Team', 'athletic team',
+#                 'team', 'Team', 'sport'],
+#             )
+#             hometown = get_value(row, ['hometown', 'Hometown', 'Hometown', 'city', 'City'])
+#             dorm = get_value(row, ['dorm', 'Dorm', 'DORM', 'residence', 'Residence'])
+#             water_comfort = get_value(
+#                 row,
+#                 ['water_comfort', 'Water Comfort', 'water comfort', 'water']
+#             )
+#             tent_comfort = get_value(row, ['tent_comfort', 'Tent Comfort', 'tent comfort', 'tent'])
+#             allergies_dietary_restrictions = get_value(row, ['allergies_dietary_restrictions', 'Allergies & Dietary Restrictions', 'allergies', 'Allergies', 'dietary restrictions', 'Dietary Restrictions'])
+#             trip_name = get_value(row, ['trip_name', 'Trip Name', 'trip name', 'Trip', 'trip'])
+#             trip_type = get_value(row, ['trip_type', 'Trip Type', 'trip type', 'Type', 'type'])
 
-            if not student_id or not first_name or not last_name or not email:
-                skipped_count += 1
-                continue
+#             if not student_id or not first_name or not last_name or not email:
+#                 skipped_count += 1
+#                 continue
 
-            trip = None
-            if trip_name:
-                trip = Trip.query.filter_by(trip_name=trip_name).first()
-                if not trip and trip_type:
-                    trip = Trip(
-                        trip_name=trip_name,
-                        trip_type=trip_type,
-                        capacity=10,
-                        water=False,
-                        tent=False
-                    )
-                    db.session.add(trip)
-                    db.session.flush()
+#             trip = None
+#             if trip_name:
+#                 trip = Trip.query.filter_by(trip_name=trip_name).first()
+#                 if not trip and trip_type:
+#                     trip = Trip(
+#                         trip_name=trip_name,
+#                         trip_type=trip_type,
+#                         capacity=10,
+#                         water=False,
+#                         tent=False
+#                     )
+#                     db.session.add(trip)
+#                     db.session.flush()
 
-            student = Student.query.filter_by(student_id=student_id).first()
+#             student = Student.query.filter_by(student_id=student_id).first()
 
-            if not student:
-                student = Student(
-                    student_id=student_id,
-                    first_name=first_name,
-                    last_name=last_name,
-                    gender=gender if gender else None,
-                    athletic_team=team if team else None,
-                    hometown=hometown if hometown else None,
-                    dorm=dorm if dorm else None,
-                    water_comfort=water_comfort if water_comfort else None,
-                    tent_comfort=tent_comfort if tent_comfort else None,
-                    email=email,
-                    allergies_dietary_restrictions=allergies_dietary_restrictions if allergies_dietary_restrictions else None,
-                    trip_id=trip.id if trip else None
-                )
-                db.session.add(student)
-                added_count += 1
-            else:
-                student.first_name = first_name
-                student.last_name = last_name
-                student.gender = gender if gender else None
-                student.athletic_team = team if team else None
-                student.hometown = hometown if hometown else None
-                student.dorm = dorm if dorm else None
-                student.water_comfort = water_comfort if water_comfort else None
-                student.tent_comfort = tent_comfort if tent_comfort else None
-                student.email = email
-                student.allergies_dietary_restrictions = allergies_dietary_restrictions if allergies_dietary_restrictions else None
-                student.trip_id = trip.id if trip else None
-                updated_count += 1
+#             if not student:
+#                 student = Student(
+#                     student_id=student_id,
+#                     first_name=first_name,
+#                     last_name=last_name,
+#                     gender=gender if gender else None,
+#                     athletic_team=team if team else None,
+#                     hometown=hometown if hometown else None,
+#                     dorm=dorm if dorm else None,
+#                     water_comfort=water_comfort if water_comfort else None,
+#                     tent_comfort=tent_comfort if tent_comfort else None,
+#                     email=email,
+#                     allergies_dietary_restrictions=allergies_dietary_restrictions if allergies_dietary_restrictions else None,
+#                     trip_id=trip.id if trip else None
+#                 )
+#                 db.session.add(student)
+#                 added_count += 1
+#             else:
+#                 student.first_name = first_name
+#                 student.last_name = last_name
+#                 student.gender = gender if gender else None
+#                 student.athletic_team = team if team else None
+#                 student.hometown = hometown if hometown else None
+#                 student.dorm = dorm if dorm else None
+#                 student.water_comfort = water_comfort if water_comfort else None
+#                 student.tent_comfort = tent_comfort if tent_comfort else None
+#                 student.email = email
+#                 student.allergies_dietary_restrictions = allergies_dietary_restrictions if allergies_dietary_restrictions else None
+#                 student.trip_id = trip.id if trip else None
+#                 updated_count += 1
 
-        db.session.commit()
-        flash(
-            f"CSV uploaded successfully! Added: {added_count}, "
-            f"Updated: {updated_count}, Skipped: {skipped_count}",
-            "success",
-        )
+#         db.session.commit()
+#         flash(
+#             f"CSV uploaded successfully! Added: {added_count}, "
+#             f"Updated: {updated_count}, Skipped: {skipped_count}",
+#             "success",
+#         )
 
-    except Exception as e:
-        db.session.rollback()
-        flash(f"⚠️ Error processing CSV: {str(e)}", "danger")
+#     except Exception as e:
+#         db.session.rollback()
+#         flash(f"⚠️ Error processing CSV: {str(e)}", "danger")
 
-    return redirect(url_for('main.groups'))
+#     return redirect(url_for('main.groups'))
 
 
 @main.route('/export_csv')
@@ -1124,72 +1131,72 @@ def export_pdf():
     except Exception as e:
         return f"Error generating PDF: {str(e)}", 500
 
-@main.route('/download_sample_csv')
-@admin_required
-def download_sample_csv():
-    """Download a sample CSV file template for student data import.
+# @main.route('/download_sample_csv')
+# @admin_required
+# def download_sample_csv():
+#     """Download a sample CSV file template for student data import.
 
-    Provides a CSV file with example data showing the expected format
-    and column names for importing student data.
+#     Provides a CSV file with example data showing the expected format
+#     and column names for importing student data.
 
-    Returns:
-        Response: CSV file download with sample data.
-    """
-    output = io.StringIO()
-    writer = csv.writer(output)
+#     Returns:
+#         Response: CSV file download with sample data.
+#     """
+#     output = io.StringIO()
+#     writer = csv.writer(output)
 
-    writer.writerow([
-        'student_id', 'first_name', 'last_name', 'email', 'gender',
-        'athletic_team', 'dorm', 'hometown',
-        'water_comfort', 'tent_comfort', 'trip_name', 'trip_type', 'allergies_dietary_restrictions'
-    ])
+#     writer.writerow([
+#         'student_id', 'first_name', 'last_name', 'email', 'gender',
+#         'athletic_team', 'dorm', 'hometown',
+#         'water_comfort', 'tent_comfort', 'trip_name', 'trip_type', 'allergies_dietary_restrictions'
+#     ])
 
-    sample_data = [
-        [
-            'S001', 'John', 'Smith', 'john.smith@colby.edu', 'Male',
-            'Soccer', 'Dana', 'Portland ME', '4', '5', 'Trip 1', 'backpacking'
-        ],
-        [
-            'S002', 'Jane', 'Doe', 'jane.doe@colby.edu', 'Female',
-            'Swimming', 'West', 'Boston MA', '5', '4', 'Trip 2', 'canoeing'
-        ],
-    ]
+#     sample_data = [
+#         [
+#             'S001', 'John', 'Smith', 'john.smith@colby.edu', 'Male',
+#             'Soccer', 'Dana', 'Portland ME', '4', '5', 'Trip 1', 'backpacking'
+#         ],
+#         [
+#             'S002', 'Jane', 'Doe', 'jane.doe@colby.edu', 'Female',
+#             'Swimming', 'West', 'Boston MA', '5', '4', 'Trip 2', 'canoeing'
+#         ],
+#     ]
 
-    for row in sample_data:
-        writer.writerow(row)
+#     for row in sample_data:
+#         writer.writerow(row)
 
-    output.seek(0)
-    return Response(
-        output.getvalue(),
-        mimetype='text/csv',
-        headers={"Content-Disposition": "attachment; filename=sample_students.csv"}
-    )
+#     output.seek(0)
+#     return Response(
+#         output.getvalue(),
+#         mimetype='text/csv',
+#         headers={"Content-Disposition": "attachment; filename=sample_students.csv"}
+#     )
 
-@main.route('/sort-students', methods=['POST'])
-@admin_required
-def sort_students_route():
-    """Trigger automatic sorting of students into trips.
+# @main.route('/sort-students', methods=['POST'])
+# @admin_required
+# def sort_students_route():
+#     """Trigger automatic sorting of students into trips.
 
-    Runs the sorting algorithm to assign all students to trips based on
-    their preferences and constraints. Displays statistics about the
-    sorting results.
+#     Runs the sorting algorithm to assign all students to trips based on
+#     their preferences and constraints. Displays statistics about the
+#     sorting results.
 
-    Returns:
-        Response: Redirect to groups page with success/error flash message
-            including sorting statistics.
-    """
-    try:
-        stats = sort_students()
-        db.session.commit()
-        flash(f'Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
-              f'{stats["first_choice_rate"]:.1f}% got first choice, '
-              f'{stats["assignment_rate"]:.1f}% total placement rate.', 'success')
+#     Returns:
+#         Response: Redirect to groups page with success/error flash message
+#             including sorting statistics.
+#     """
+#     try:
+#         stats = sort_students()
+#         db.session.commit()
+#         flash(f'Sorting completed! {stats["assigned"]}/{stats["total"]} students placed. '
+#               f'{stats["first_choice_rate"]:.1f}% got first choice, '
+#               f'{stats["assignment_rate"]:.1f}% total placement rate.', 'success')
 
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Sorting failed: {str(e)}', 'danger')
+#     except Exception as e:
+#         db.session.rollback()
+#         flash(f'Sorting failed: {str(e)}', 'danger')
 
-    return redirect(url_for('main.groups'))
+#     return redirect(url_for('main.groups'))
 
 @main.route('/clear-databases', methods=['POST'])
 @manager_required
@@ -1215,6 +1222,9 @@ def clear_databases():
             (User.role.is_(None))
         ).delete(synchronize_session=False)
 
+        # Hide trips from students
+        settings = AppSettings.get()
+        settings.show_trips_to_students = False
 
         db.session.commit()
         flash(

@@ -257,11 +257,11 @@ class COOTSorter:
 
         # LOG: Show the custom criteria being used for this sort
         # (remove after debugging)
-        if self.custom_criteria:
-            print(
-                f"[COOTSorter] Using custom criteria order: "
-                f"{[c['type'] for c in self.custom_criteria]}"
-            )
+        # if self.custom_criteria:
+        #     print(
+        #         f"[COOTSorter] Using custom criteria order: "
+        #         f"{[c['type'] for c in self.custom_criteria]}"
+        #     )
 
         # If custom_criteria is set, use its order for constraints
         if self.custom_criteria:
@@ -271,12 +271,12 @@ class COOTSorter:
                 # (remove after debugging)
                 if checker:
                     result = checker()
-                    print(
-                        f"[COOTSorter] Checking {crit['type']} for student "
-                        f"{getattr(student, 'student_id', None)} in trip "
-                        f"{getattr(trip, 'id', None)}: "
-                        f"{'PASS' if result else 'FAIL'}"
-                    )
+                    # print(
+                    #     f"[COOTSorter] Checking {crit['type']} for student "
+                    #     f"{getattr(student, 'student_id', None)} in trip "
+                    #     f"{getattr(trip, 'id', None)}: "
+                    #     f"{'PASS' if result else 'FAIL'}"
+                    # )
                     if not result:
                         return False
         else:

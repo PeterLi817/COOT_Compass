@@ -193,8 +193,8 @@ def swap_students():
         db.session.commit()
 
         message = (
-            f'Swapped {student1.first_name} {student1.last_name} ({trip1_name}) '
-            f'with {student2.first_name} {student2.last_name} ({trip2_name})'
+            f'Swapped {student1.first_name} {student1.last_name} (from {trip1_name}) '
+            f'with {student2.first_name} {student2.last_name} (from {trip2_name})'
         )
 
         return jsonify({
@@ -409,6 +409,20 @@ def process_matched_csv():
 
         db.session.commit()
 
+        # Create success message
+        message_parts = []
+        if added > 0:
+            message_parts.append(f"{added} student(s) added")
+        if updated > 0:
+            message_parts.append(f"{updated} student(s) updated")
+        if skipped > 0:
+            message_parts.append(f"{skipped} student(s) skipped")
+
+        flash(f"Student CSV processed successfully: {', '.join(message_parts)}.", 'success')
+
+        if errors:
+            flash(f"{len(errors)} error(s) encountered. Check the response for details.", 'warning')
+
         return jsonify({
             "success": True,
             "added": added,
@@ -526,6 +540,20 @@ def process_matched_trips_csv():
 
         db.session.commit()
 
+        # Create success message
+        message_parts = []
+        if added > 0:
+            message_parts.append(f"{added} trip(s) added")
+        if updated > 0:
+            message_parts.append(f"{updated} trip(s) updated")
+        if skipped > 0:
+            message_parts.append(f"{skipped} trip(s) skipped")
+
+        flash(f"Trips CSV processed successfully: {', '.join(message_parts)}.", 'success')
+
+        if errors:
+            flash(f"{len(errors)} error(s) encountered. Check the response for details.", 'warning')
+
         return jsonify({
             "success": True,
             "added": added,
@@ -562,14 +590,12 @@ def update_user_role():
         new_role = data.get('role')
 
         if not email:
-            flash('Missing email', 'danger')
-            return jsonify({'success': False}), 400
+            return jsonify({'success': False, 'message': 'Missing email'}), 400
 
         # Validate role
         valid_roles = ['admin_manager', 'admin', 'student', 'none', None]
         if new_role not in valid_roles:
-            flash('Invalid role', 'danger')
-            return jsonify({'success': False}), 400
+            return jsonify({'success': False, 'message': 'Invalid role'}), 400
 
         # Convert string 'none' to None
         if new_role == 'none':
@@ -578,8 +604,7 @@ def update_user_role():
         # Find user
         user = User.query.filter_by(email=email).first()
         if not user:
-            flash('User not found', 'danger')
-            return jsonify({'success': False}), 404
+            return jsonify({'success': False, 'message': 'User not found'}), 404
 
         # Prevent self-demotion from admin_manager
         if (
@@ -587,8 +612,7 @@ def update_user_role():
             and current_user.role == 'admin_manager'
             and new_role != 'admin_manager'
         ):
-            flash('Cannot change your own admin_manager role', 'danger')
-            return jsonify({'success': False}), 403
+            return jsonify({'success': False, 'message': 'Cannot change your own admin_manager role'}), 403
 
         # Update role
         user.role = new_role
@@ -603,8 +627,7 @@ def update_user_role():
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        flash(f'Error updating user role: {str(e)}', 'danger')
-        return jsonify({'success': False}), 500
+        return jsonify({'success': False, 'message': f'Error updating user role: {str(e)}'}), 500
 
 @api.route('/sort-students', methods=['POST'])
 @admin_required
@@ -631,6 +654,24 @@ def sort_students_api():
             stats = sort_students()
         db.session.commit()
 
+        # Create flash message based on sorting results
+        if stats.get('all_valid', False):
+            flash(
+                f'🎯 Sorting completed in {stats["attempts"]} attempt(s)! '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice, '
+                f'{stats["assignment_rate"]:.1f}% total placement rate. '
+                f'All trips are valid! ✓',
+                'success'
+            )
+        else:
+            flash(
+                f'⚠️ Sorting completed after {stats["attempts"]} attempts, but some trips may still be invalid. '
+                f'{stats["assigned"]}/{stats["total"]} students placed. '
+                f'{stats["first_choice_rate"]:.1f}% got first choice.',
+                'warning'
+            )
+
         return jsonify({
             'success': True,
             'message': 'Sorting completed.',
@@ -641,5 +682,5 @@ def sort_students_api():
         db.session.rollback()
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': f'Error sorting students: {str(e)}'
         }), 400

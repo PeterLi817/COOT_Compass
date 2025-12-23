@@ -135,22 +135,13 @@ $(document).ready(function() {
     $('#confirmClearDB').on('click', function() {
         const inputValue = $('#confirmTextInput').val();
         if (inputValue.toUpperCase() === 'CONFIRM') {
-            fetch(`/clear-databases`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }).then(response => {
-                if (response.ok) {
-                    window.location.reload();
-                } else {
-                    alert('Error clearing databases. Check console for details.');
-                }
-            }).catch(error => {
-                console.error('Error:', error);
-                alert('Error clearing databases.');
+            // Use form submission to properly preserve flash messages on redirect
+            const form = $('<form>', {
+                'method': 'POST',
+                'action': '/clear-databases'
             });
-            $('#confirmClearDBModal').modal('hide');
+            $('body').append(form);
+            form.submit();
         }
     });
 

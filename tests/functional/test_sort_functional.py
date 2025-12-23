@@ -54,38 +54,38 @@ def test_sort_students_no_trips_exception(app):
             sorter.sort_all_students()
 
 
-def test_sort_students_with_custom_criteria_prints_debug(app, capsys):
-    """Test that custom criteria triggers print statements."""
-    with app.app_context():
-        # Clear database
-        Student.query.delete()
-        Trip.query.delete()
-        db.session.commit()
+# def test_sort_students_with_custom_criteria_prints_debug(app, capsys):
+#     """Test that custom criteria triggers print statements."""
+#     with app.app_context():
+#         # Clear database
+#         Student.query.delete()
+#         Trip.query.delete()
+#         db.session.commit()
 
-        # Add a trip
-        trip = Trip(trip_name='Test Trip', trip_type='hiking', capacity=10)
-        db.session.add(trip)
+#         # Add a trip
+#         trip = Trip(trip_name='Test Trip', trip_type='hiking', capacity=10)
+#         db.session.add(trip)
 
-        # Add a student with matching preference
-        student = Student(
-            student_id='S1',
-            first_name='Test',
-            last_name='Student',
-            email='test@colby.edu',
-            gender='male',
-            dorm='Dana',
-            trip_pref_1='hiking'
-        )
-        db.session.add(student)
-        db.session.commit()
+#         # Add a student with matching preference
+#         student = Student(
+#             student_id='S1',
+#             first_name='Test',
+#             last_name='Student',
+#             email='test@colby.edu',
+#             gender='male',
+#             dorm='Dana',
+#             trip_pref_1='hiking'
+#         )
+#         db.session.add(student)
+#         db.session.commit()
 
-        # Run sort with custom criteria to trigger print statements
-        sorter = COOTSorter(custom_criteria=[{'type': 'dorm'}, {'type': 'gender'}])
-        sorter.sort_all_students()
+#         # Run sort with custom criteria to trigger print statements
+#         sorter = COOTSorter(custom_criteria=[{'type': 'dorm'}, {'type': 'gender'}])
+#         sorter.sort_all_students()
 
-        # Check that debug print was called (lines 281, 285, 289, 291)
-        captured = capsys.readouterr()
-        assert 'custom criteria order' in captured.out or 'Checking' in captured.out
+#         # Check that debug print was called (lines 281, 285, 289, 291)
+#         captured = capsys.readouterr()
+#         assert 'custom criteria order' in captured.out or 'Checking' in captured.out
 
 
 def test_sort_students_emergency_placement_scoring(app):
