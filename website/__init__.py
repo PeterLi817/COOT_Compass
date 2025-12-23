@@ -131,6 +131,20 @@ def create_app():
         ), 404
 
     with app.app_context():
-        db.create_all()
+        # Check if database exists and has tables
+        # If database file is missing or tables don't exist, create them
+        try:
+            inspector = db.inspect(db.engine)
+            existing_tables = inspector.get_table_names()
+
+            # If no tables exist, create all tables
+            if not existing_tables:
+                db.create_all()
+                print("Database was empty or missing - created all tables")
+        except Exception as e:
+            # If there's any error inspecting (e.g., database doesn't exist), create tables
+            print(f"Database initialization needed: {e}")
+            db.create_all()
+            print("Created all tables")
 
     return app
