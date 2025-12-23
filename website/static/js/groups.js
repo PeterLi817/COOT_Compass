@@ -608,7 +608,6 @@ function setupCSVMatching() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert(`CSV uploaded successfully!\nAdded: ${data.added}, Updated: ${data.updated}, Skipped: ${data.skipped}`);
                     if (data.errors && data.errors.length > 0) {
                         console.warn('Errors:', data.errors);
                     }
@@ -620,7 +619,6 @@ function setupCSVMatching() {
                     }
                     window.location.reload();
                 } else {
-                    alert('Error: ' + (data.message || 'Failed to upload CSV'));
                     if (submitBtn) {
                         submitBtn.disabled = false;
                         submitBtn.textContent = 'Upload CSV';
@@ -629,7 +627,6 @@ function setupCSVMatching() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error uploading CSV: ' + error.message);
                 if (submitBtn) {
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Upload CSV';
