@@ -295,7 +295,6 @@ def process_matched_csv():
         import_mode = request.form.get("importMode")
 
         if not file:
-            flash('No CSV uploaded.', 'danger')
             return jsonify({"success": False, "message": "No CSV uploaded."}), 400
 
         stream = io.StringIO(file.stream.read().decode("utf-8"))
@@ -303,7 +302,6 @@ def process_matched_csv():
         rows = list(csv_input)
 
         if not rows:
-            flash('CSV is empty.', 'danger')
             return jsonify({"success": False, "message": "CSV is empty."}), 400
 
         column_map = {
@@ -435,7 +433,6 @@ def process_matched_csv():
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Error processing student CSV: {str(e)}', 'danger')
         return jsonify({"success": False, "message": str(e)}), 500
 
 @api.route('/process_matched_trips_csv', methods=['POST'])
@@ -462,7 +459,6 @@ def process_matched_trips_csv():
         import_mode = request.form.get("importMode")
 
         if not file:
-            flash('No CSV uploaded.', 'danger')
             return jsonify({"success": False, "message": "No CSV uploaded."}), 400
 
         stream = io.StringIO(file.stream.read().decode("utf-8"))
@@ -470,7 +466,6 @@ def process_matched_trips_csv():
         rows = list(csv_input)
 
         if not rows:
-            flash('CSV is empty.', 'danger')
             return jsonify({"success": False, "message": "CSV is empty."}), 400
 
         column_map = {
@@ -569,7 +564,6 @@ def process_matched_trips_csv():
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Error processing trip CSV: {str(e)}', 'danger')
         return jsonify({"success": False, "message": str(e)}), 500
 
 @api.route('/update-user-role', methods=['POST'])
@@ -596,14 +590,12 @@ def update_user_role():
         new_role = data.get('role')
 
         if not email:
-            flash('Missing email', 'danger')
-            return jsonify({'success': False}), 400
+            return jsonify({'success': False, 'message': 'Missing email'}), 400
 
         # Validate role
         valid_roles = ['admin_manager', 'admin', 'student', 'none', None]
         if new_role not in valid_roles:
-            flash('Invalid role', 'danger')
-            return jsonify({'success': False}), 400
+            return jsonify({'success': False, 'message': 'Invalid role'}), 400
 
         # Convert string 'none' to None
         if new_role == 'none':
@@ -612,8 +604,7 @@ def update_user_role():
         # Find user
         user = User.query.filter_by(email=email).first()
         if not user:
-            flash('User not found', 'danger')
-            return jsonify({'success': False}), 404
+            return jsonify({'success': False, 'message': 'User not found'}), 404
 
         # Prevent self-demotion from admin_manager
         if (
@@ -621,8 +612,7 @@ def update_user_role():
             and current_user.role == 'admin_manager'
             and new_role != 'admin_manager'
         ):
-            flash('Cannot change your own admin_manager role', 'danger')
-            return jsonify({'success': False}), 403
+            return jsonify({'success': False, 'message': 'Cannot change your own admin_manager role'}), 403
 
         # Update role
         user.role = new_role
@@ -637,8 +627,7 @@ def update_user_role():
         return jsonify({'success': True})
     except Exception as e:
         db.session.rollback()
-        flash(f'Error updating user role: {str(e)}', 'danger')
-        return jsonify({'success': False}), 500
+        return jsonify({'success': False, 'message': f'Error updating user role: {str(e)}'}), 500
 
 @api.route('/sort-students', methods=['POST'])
 @admin_required
@@ -691,8 +680,7 @@ def sort_students_api():
 
     except Exception as e:
         db.session.rollback()
-        flash(f'⚠️ Error sorting students: {str(e)}', 'danger')
         return jsonify({
             'success': False,
-            'message': str(e)
+            'message': f'Error sorting students: {str(e)}'
         }), 400
