@@ -7,9 +7,10 @@ PDF generation, and various administrative functions.
 import csv
 import io
 import json
+import os
 from datetime import datetime
 
-from flask import Blueprint, render_template, redirect, url_for, request, flash, Response, send_file
+from flask import Blueprint, render_template, redirect, url_for, request, flash, Response, send_file, send_from_directory
 from flask_login import login_required, current_user
 
 from reportlab.pdfgen import canvas
@@ -21,6 +22,13 @@ from .sort import sort_students
 from .static.utils.decorators import manager_required, admin_required, student_required
 
 main = Blueprint('main', __name__)
+
+@main.route('/favicon.ico')
+def favicon():
+    """Serve the favicon."""
+    return send_from_directory(os.path.join(main.root_path, 'static', 'img'),
+                               'web-app-manifest-512x512.png',
+                               mimetype='image/png')
 
 @main.route('/settings')
 @admin_required
