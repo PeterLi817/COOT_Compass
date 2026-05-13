@@ -35,7 +35,23 @@ def create_app():
     Raises:
         ValueError: If SECRET_KEY environment variable is not set.
     """
-    app = Flask(__name__)
+    import sys
+
+    def resource_path(relative_path):
+        """Get absolute path to resource for PyInstaller."""
+        try:
+            base_path = sys._MEIPASS
+        except AttributeError:
+            base_path = os.path.abspath(".")
+
+        return os.path.join(base_path, relative_path)
+
+
+    app = Flask(
+        __name__,
+        template_folder=resource_path('website/templates'),
+        static_folder=resource_path('website/static')
+    )
 
     from .views import main # pylint: disable=import-outside-toplevel
     from .fill_db import add_fake_data #for development purposes
